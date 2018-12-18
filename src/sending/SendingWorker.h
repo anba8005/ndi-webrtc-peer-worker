@@ -14,9 +14,9 @@ public:
     virtual ~SendingWorker();
 
 protected:
-    bool onStart() override;
+    void onStart() override;
     void onEnd() override;
-    bool onCommand(std::vector<std::string> command) override;
+    void onCommand(std::vector<std::string> command) override;
 
 };
 

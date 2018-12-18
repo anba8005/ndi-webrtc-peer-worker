@@ -6,7 +6,15 @@
 #include "receiving/ReceivingWorker.h"
 #include "sending/SendingWorker.h"
 
+#include "rtc_base/logging.h"
+#include "rtc_base/ssladapter.h"
+
 int main(int argc, char **argv) {
+    rtc::LogMessage::LogToDebug(rtc::LS_INFO);
+    rtc::LogMessage::LogTimestamps();
+    rtc::LogMessage::LogThreads();
+    rtc::InitializeSSL();
+    //
     args::ArgumentParser parser("This is a test program.");
     args::Group group(parser, "Working mode:", args::Group::Validators::Xor);
     args::Flag sending(group, "sending", "Sending mode", {"sending"});

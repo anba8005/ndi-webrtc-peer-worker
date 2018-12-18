@@ -19,7 +19,7 @@ add_executable(
         src/common/AWorker.cpp src/common/AWorker.h
         src/receiving/ReceivingWorker.cpp src/receiving/ReceivingWorker.h
         src/sending/SendingWorker.cpp src/sending/SendingWorker.h
-)
+        src/common/PeerFactoryContext.cpp src/common/PeerFactoryContext.h src/common/FakeAudioDeviceModule.cpp src/common/FakeAudioDeviceModule.h)
 
 target_link_libraries(gyvaitv_webrtc ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} avcodec avformat avutil swscale avdevice ndi pthread dl)
 target_include_directories(gyvaitv_webrtc PUBLIC ${WEBRTC_INCLUDE_DIR})

@@ -3,7 +3,10 @@
 //
 
 #include <iostream>
+
 #include "SendingWorker.h"
+#include "../common/FakeAudioDeviceModule.h"
+
 
 SendingWorker::SendingWorker() {
 
@@ -13,14 +16,13 @@ SendingWorker::~SendingWorker() {
 
 }
 
-bool SendingWorker::onStart() {
-
+void SendingWorker::onStart() {
 }
 
 void SendingWorker::onEnd() {
 
 }
 
-bool SendingWorker::onCommand(std::vector<std::string> command) {
+void SendingWorker::onCommand(std::vector<std::string> command) {
 
 }

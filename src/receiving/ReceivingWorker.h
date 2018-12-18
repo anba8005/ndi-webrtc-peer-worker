@@ -7,15 +7,18 @@
 
 #include "../common/AWorker.h"
 
-class ReceivingWorker: public AWorker {
+class ReceivingWorker : public AWorker {
 public:
     ReceivingWorker();
+
     virtual ~ReceivingWorker();
 
 protected:
-    bool onStart() override;
+    void onStart() override;
+
     void onEnd() override;
-    bool onCommand(std::vector<std::string> command) override;
+
+    void onCommand(std::vector<std::string> command) override;
 };
 
 
