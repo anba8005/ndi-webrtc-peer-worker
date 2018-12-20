@@ -15,6 +15,9 @@
 #include "PeerFactoryContext.h"
 #include "api/test/fakeconstraints.h"
 
+#include "json.hpp"
+
+using json = nlohmann::json;
 
 class AWorker : public webrtc::PeerConnectionObserver, public webrtc::CreateSessionDescriptionObserver {
 public:
@@ -29,29 +32,30 @@ protected:
 
     virtual void onEnd() = 0;
 
-    virtual void onCommand(std::vector<std::string> command) = 0;
+    virtual void onCommand(std::string command, std::string correlation, json payload);
 
     void print(std::string s);
 
-    void error(std::string e);
+    //
+    void setLocalDescription(const std::string &type, const std::string &sdp);
 
-    void recvSDP(const std::string &type, const std::string &sdp);
+    void setRemoteDescription(const std::string &type, const std::string &sdp);
 
-    void recvCandidate(const std::string &mid, int mlineindex, const std::string &sdp);
+    void addIceCandidate(const std::string &mid, int mlineindex, const std::string &sdp);
+
+
 
     std::shared_ptr<PeerFactoryContext> context;
     rtc::scoped_refptr<webrtc::PeerConnectionInterface> peer;
     webrtc::FakeConstraints constraints;
 
 private:
-    bool isCommandAvailable();
+    void dispatcher();
 
     void print_commit();
 
     std::mutex print_mutex;
-    std::mutex error_mutex;
     std::vector<std::string> print_buffer;
-    std::vector<std::string> error_buffer;
 
     std::atomic<bool> finished;
 

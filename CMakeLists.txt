@@ -8,7 +8,6 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 list(APPEND CMAKE_MODULE_PATH /usr/local/share/libsourcey/cmake)
 
-
 include(CMakeHelpers)
 include(CMakeFindExtensions)
 include(FindWebRTC)
@@ -16,10 +15,14 @@ include(FindWebRTC)
 add_executable(
         gyvaitv_webrtc
         src/main.cpp
-        src/common/AWorker.cpp src/common/AWorker.h
-        src/receiving/ReceivingWorker.cpp src/receiving/ReceivingWorker.h
-        src/sending/SendingWorker.cpp src/sending/SendingWorker.h
-        src/common/PeerFactoryContext.cpp src/common/PeerFactoryContext.h src/common/FakeAudioDeviceModule.cpp src/common/FakeAudioDeviceModule.h)
+        src/common/PeerFactoryContext.cpp src/common/PeerFactoryContext.h
+        src/common/FakeAudioDeviceModule.cpp src/common/FakeAudioDeviceModule.h
+        src/common/SetSessionDescriptionObserver.cpp src/common/SetSessionDescriptionObserver.h
+        src/common/PeerContext.cpp src/common/PeerContext.h
+        src/common/Signaling.cpp src/common/Signaling.h
+        src/common/Dispatcher.cpp src/common/Dispatcher.h
+        src/receiving/RemotePeerContext.cpp src/receiving/RemotePeerContext.h
+        src/sending/LocalPeerContext.cpp src/sending/LocalPeerContext.h src/common/CreateSessionDescriptionObserver.cpp src/common/CreateSessionDescriptionObserver.h)
 
 target_link_libraries(gyvaitv_webrtc ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} avcodec avformat avutil swscale avdevice ndi pthread dl)
 target_include_directories(gyvaitv_webrtc PUBLIC ${WEBRTC_INCLUDE_DIR})

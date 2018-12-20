@@ -2,12 +2,16 @@
 #include <memory>
 
 #include "common/args.hxx"
-#include "common/AWorker.h"
-#include "receiving/ReceivingWorker.h"
-#include "sending/SendingWorker.h"
+
+#include "common/Dispatcher.h"
+#include "common/Signaling.h"
+#include "receiving/RemotePeerContext.h"
+#include "sending/LocalPeerContext.h"
 
 #include "rtc_base/logging.h"
 #include "rtc_base/ssladapter.h"
+
+using namespace std;
 
 int main(int argc, char **argv) {
     rtc::LogMessage::LogToDebug(rtc::LS_INFO);
@@ -38,16 +42,18 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
     //
-    std::shared_ptr<AWorker> worker;
-    if (sending) {
-        // sending mode
-        worker = std::make_shared<SendingWorker>();
-    } else if (receiving) {
-        // receiving mode
-        worker = std::make_shared<ReceivingWorker>();
-    }
     //
-    worker->run();
+    //
+    shared_ptr<Signaling> signaling = make_shared<Signaling>();
+    shared_ptr<PeerContext> peer;
+    if (sending) {
+        peer = make_shared<LocalPeerContext>(signaling);
+    } else {
+        peer = make_shared<RemotePeerContext>(signaling);
+    }
+    shared_ptr<Dispatcher> dispatcher = make_shared<Dispatcher>(signaling,peer);
+    //
+    dispatcher->run();
     //
     return EXIT_SUCCESS;
 }

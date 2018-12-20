@@ -22,52 +22,82 @@ AWorker::~AWorker() {
 void AWorker::run() {
     this->onStart();
     //
-    print("state:negotiating");
+    std::thread dispatcherThread(&AWorker::dispatcher, this);
     //
-    auto rtcthread = rtc::Thread::Current();
-    //
+    print("state:started");
+    auto rtcThread = rtc::Thread::Current();
     while (!this->finished.load()) {
-        if (this->isCommandAvailable()) {
-            // get command line
-            std::string commandLine;
-            getline(std::cin, commandLine);
-            // to upper case
-            for (auto &c : commandLine)
-                c = std::toupper(c);
-            // split
-            std::istringstream ss(commandLine);
-            std::vector<std::string> command;
-            std::string c;
-            while (getline(ss, c, ':')) {
-                command.push_back(c);
-            }
-            // execute
-            this->onCommand(command);
-        }
-        // process webrtc
-        rtcthread->ProcessMessages(10);
-        // respond
+        rtcThread->ProcessMessages(10);
         this->print_commit();
     }
+    //
+    dispatcherThread.join();
     //
     this->onEnd();
 }
 
-bool AWorker::isCommandAvailable() {
-    pollfd fdinfo;
-    fdinfo.fd = fileno(stdin);
-    fdinfo.events = POLLIN;
-    return poll(&fdinfo, 1, 1) > 0;
+void AWorker::dispatcher() {
+    std::cerr << "dispatcher started" << std::endl;
+    while (!this->finished.load()) {
+        // get command line
+        std::string commandLine;
+        getline(std::cin, commandLine);
+        // decode
+        json root;
+        try {
+            // dispatch
+            root = json::parse(commandLine);
+            std::string command = root.value("command","");
+            std::string correlation = root.value("correlation","");
+            onCommand(command,correlation,root["payload"]);
+        } catch (...) {
+            // parse error
+            std::cerr << "JSON parse error" << std::endl;
+            std::cerr << "---" << std::endl;
+            std::cerr << commandLine << std::endl;
+            std::cerr << "---" << std::endl;
+        }
+    }
+}
+
+void AWorker::onCommand(std::string command, std::string correlation, json payload) {
+    std::cerr << "command -> " << command << std::endl;
+    if (command == "addIceCandidate") {
+        //
+        const std::string sdpMid = payload.value("sdpMid","");
+        const int sdpMLineIndex = payload.value("sdpMLineIndex",1);
+        const std::string candidate = payload.value("candidate","");
+        this->addIceCandidate(sdpMid,sdpMLineIndex,candidate);
+        //
+    } else if (command == "setRemoteDescription") {
+        //
+        const std::string sdp = payload.value("sdp","");
+        const std::string type = payload.value("type","");
+        this->setRemoteDescription(type, sdp);
+        //
+    } else if (command == "setLocalDescription") {
+        //
+        const std::string sdp = payload.value("sdp","");
+        const std::string type = payload.value("type","");
+        this->setLocalDescription(type, sdp);
+    } else if (command == "createOffer") {
+        //
+        const std::string sdp = payload.value("sdp","");
+        const std::string type = payload.value("type","");
+        //this->setRemoteDescription(type, sdp);
+        //
+    } else if (command == "createAnswer") {
+        //
+        const std::string sdp = payload.value("sdp","");
+        const std::string type = payload.value("type","");
+        //this->setRemoteDescription(type, sdp);
+        //
+    }
 }
 
 void AWorker::print(std::string s) {
     std::unique_lock<std::mutex> lock(this->print_mutex);
     this->print_buffer.push_back(s);
-}
-
-void AWorker::error(std::string e) {
-    std::unique_lock<std::mutex> lock(this->error_mutex);
-    this->error_buffer.push_back(e);
 }
 
 void AWorker::print_commit() {
@@ -117,7 +147,7 @@ void AWorker::OnIceCandidate(const webrtc::IceCandidateInterface *candidate) {
         throw new std::runtime_error("Failed to serialize local candidate");
     }
 
-    print("candidate:" + candidate->sdp_mid()+ ":" + std::to_string(candidate->sdp_mline_index()) + ":" + sdp);
+    print("candidate:" + candidate->sdp_mid() + ":" + std::to_string(candidate->sdp_mline_index()) + ":" + sdp);
 }
 
 void AWorker::OnSuccess(webrtc::SessionDescriptionInterface *desc) { // createOffer or createAnswer callback
@@ -138,8 +168,11 @@ void AWorker::OnFailure(const std::string &error) { // createOffer or createAnsw
     throw new std::runtime_error("Create session error: " + error);
 }
 
+//
+//
+//
 
-void AWorker::recvSDP(const std::string &type, const std::string &sdp) {
+void AWorker::setRemoteDescription(const std::string &type, const std::string &sdp) {
     webrtc::SdpParseError error;
     webrtc::SessionDescriptionInterface *desc(webrtc::CreateSessionDescription(type, sdp, &error));
     if (!desc)
@@ -148,7 +181,17 @@ void AWorker::recvSDP(const std::string &type, const std::string &sdp) {
     this->peer->SetRemoteDescription(DummySetSessionDescriptionObserver::Create(), desc);
 }
 
-void AWorker::recvCandidate(const std::string &mid, int mlineindex, const std::string &sdp) {
+void AWorker::setLocalDescription(const std::string &type, const std::string &sdp) {
+    webrtc::SdpParseError error;
+    webrtc::SessionDescriptionInterface *desc(webrtc::CreateSessionDescription(type, sdp, &error));
+    if (!desc)
+        throw std::runtime_error("Can't parse remote SDP: " + error.description);
+
+    this->peer->SetLocalDescription(DummySetSessionDescriptionObserver::Create(), desc);
+}
+
+
+void AWorker::addIceCandidate(const std::string &mid, int mlineindex, const std::string &sdp) {
     webrtc::SdpParseError error;
     std::unique_ptr<webrtc::IceCandidateInterface> candidate(webrtc::CreateIceCandidate(mid, mlineindex, sdp, &error));
     if (!candidate) {
@@ -163,6 +206,7 @@ void AWorker::recvCandidate(const std::string &mid, int mlineindex, const std::s
 //
 
 void DummySetSessionDescriptionObserver::OnSuccess() {
+    std::cerr << "observer created" << std::endl;
 }
 
 
