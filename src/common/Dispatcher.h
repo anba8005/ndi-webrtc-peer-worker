@@ -29,7 +29,7 @@ private:
 
     void dispatch();
 
-    void exec(string command, string correlation, json payload);
+    void exec(string command, int64_t correlation, json payload);
 };
 
 

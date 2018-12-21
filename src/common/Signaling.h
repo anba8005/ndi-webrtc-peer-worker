@@ -10,17 +10,31 @@
 #include <vector>
 #include <memory>
 
+#include "json.hpp"
+
+using json = nlohmann::json;
+
 using namespace std;
 
 class Signaling {
 public:
-    void send(string s);
-    void commit();
+    void commitBuffer();
 
     string receive();
+
+    void replyOk(const string command, int64_t correlation);
+
+    void replyWithPayload(const string command, json payload, int64_t correlation);
+
+    void replyError(const string command, string error, int64_t correlation);
+
+    void state(const string command, json payload);
+
 private:
     std::mutex mutex;
     vector<string> buffer;
+
+    void send(string s);
 
 };
 

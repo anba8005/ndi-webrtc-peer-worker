@@ -17,6 +17,12 @@
 
 using namespace std;
 
+const string COMMAND_SET_LOCAL_DESCRIPTION = "setLocalDescription";
+const string COMMAND_SET_REMOTE_DESCRIPTION = "setRemoteDescription";
+const string COMMAND_ADD_ICE_CANDIDATE = "addIceCandidate";
+const string COMMAND_CREATE_OFFER = "createOffer";
+const string COMMAND_CREATE_ANSWER = "createAnswer";
+
 class PeerContext : public webrtc::PeerConnectionObserver {
 public:
     PeerContext(shared_ptr<Signaling> signaling);
@@ -35,12 +41,17 @@ public:
 
     //
 
-    void setLocalDescription(const string &type, const string &sdp);
+    void setLocalDescription(const string &type, const string &sdp, int64_t correlation);
 
-    void setRemoteDescription(const string &type, const string &sdp);
+    void setRemoteDescription(const string &type, const string &sdp, int64_t correlation);
 
-    void addIceCandidate(const string &mid, int mlineindex, const string &sdp);
+    void addIceCandidate(const string &mid, int mlineindex, const string &sdp, int64_t correlation);
 
+    void createAnswer(int64_t correlation);
+
+    void OnAddStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) override;
+
+    void OnRemoveStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) override;
 
 protected:
 
@@ -53,6 +64,8 @@ protected:
     // inherited from PeerConnectionObserver
 
     void OnDataChannel(rtc::scoped_refptr<webrtc::DataChannelInterface> data_channel) override;
+
+    void OnTrack(rtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver) override;
 
     void OnSignalingChange(webrtc::PeerConnectionInterface::SignalingState new_state) override;
 

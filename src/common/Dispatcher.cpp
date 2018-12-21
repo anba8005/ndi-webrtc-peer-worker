@@ -10,7 +10,8 @@
 
 using json = nlohmann::json;
 
-Dispatcher::Dispatcher(shared_ptr<Signaling> signaling, shared_ptr<PeerContext> peer) : signaling(signaling), peer(peer) {
+Dispatcher::Dispatcher(shared_ptr<Signaling> signaling, shared_ptr<PeerContext> peer) : signaling(signaling),
+                                                                                        peer(peer) {
 
 }
 
@@ -21,7 +22,7 @@ void Dispatcher::run() {
     //
     while (!this->finished.load()) {
         peer->processMessages();
-        signaling->commit();
+        signaling->commitBuffer();
     }
     //
     dispatcherThread.join();
@@ -30,7 +31,6 @@ void Dispatcher::run() {
 }
 
 void Dispatcher::dispatch() {
-    cerr << "dispatcher started" << endl;
     while (!this->finished.load()) {
         // get command line
         string commandLine = signaling->receive();
@@ -39,9 +39,9 @@ void Dispatcher::dispatch() {
         try {
             // dispatch
             root = json::parse(commandLine);
-            string command = root.value("command","");
-            string correlation = root.value("correlation","");
-            this->exec(command,correlation,root["payload"]);
+            string command = root.value("command", "");
+            int64_t correlation = root.value("correlation", 0);
+            this->exec(command, correlation, root["payload"]);
         } catch (...) {
             // parse error
             cerr << "JSON parse error" << endl;
@@ -52,37 +52,32 @@ void Dispatcher::dispatch() {
     }
 }
 
-void Dispatcher::exec(string command, string correlation, json payload) {
-    cerr << "command -> " << command << endl;
-    if (command == "addIceCandidate") {
+void Dispatcher::exec(string command, int64_t correlation, json payload) {
+    if (command == COMMAND_ADD_ICE_CANDIDATE) {
         //
-        const string sdpMid = payload.value("sdpMid","");
-        const int sdpMLineIndex = payload.value("sdpMLineIndex",1);
-        const string candidate = payload.value("candidate","");
-        peer->addIceCandidate(sdpMid,sdpMLineIndex,candidate);
+        const string sdpMid = payload.value("sdpMid", "");
+        const int sdpMLineIndex = payload.value("sdpMLineIndex", 1);
+        const string candidate = payload.value("candidate", "");
+        peer->addIceCandidate(sdpMid, sdpMLineIndex, candidate, correlation);
         //
-    } else if (command == "setRemoteDescription") {
+    } else if (command == COMMAND_SET_REMOTE_DESCRIPTION) {
         //
-        const string sdp = payload.value("sdp","");
-        const string type = payload.value("type","");
-        peer->setRemoteDescription(type, sdp);
+        const string sdp = payload.value("sdp", "");
+        const string type = payload.value("type", "");
+        peer->setRemoteDescription(type, sdp, correlation);
         //
-    } else if (command == "setLocalDescription") {
+    } else if (command == COMMAND_SET_LOCAL_DESCRIPTION) {
         //
-        const string sdp = payload.value("sdp","");
-        const string type = payload.value("type","");
-        peer->setLocalDescription(type, sdp);
-    } else if (command == "createOffer") {
+        const string sdp = payload.value("sdp", "");
+        const string type = payload.value("type", "");
+        peer->setLocalDescription(type, sdp, correlation);
+    } else if (command == COMMAND_CREATE_OFFER) {
         //
-        const string sdp = payload.value("sdp","");
-        const string type = payload.value("type","");
-        //this->setRemoteDescription(type, sdp);
+
         //
-    } else if (command == "createAnswer") {
+    } else if (command == COMMAND_CREATE_ANSWER) {
         //
-        const string sdp = payload.value("sdp","");
-        const string type = payload.value("type","");
-        //this->setRemoteDescription(type, sdp);
+        peer->createAnswer(correlation);
         //
     }
 }
