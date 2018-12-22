@@ -49,14 +49,10 @@ public:
 
     void createAnswer(int64_t correlation);
 
-    void OnAddStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) override;
-
-    void OnRemoveStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) override;
-
 protected:
 
     shared_ptr<PeerFactoryContext> context;
-    rtc::scoped_refptr<webrtc::PeerConnectionInterface> peer;
+    rtc::scoped_refptr<webrtc::PeerConnectionInterface> pc;
     webrtc::FakeConstraints constraints;
 
     shared_ptr<Signaling> signaling;
@@ -64,8 +60,6 @@ protected:
     // inherited from PeerConnectionObserver
 
     void OnDataChannel(rtc::scoped_refptr<webrtc::DataChannelInterface> data_channel) override;
-
-    void OnTrack(rtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver) override;
 
     void OnSignalingChange(webrtc::PeerConnectionInterface::SignalingState new_state) override;
 
@@ -76,6 +70,10 @@ protected:
     void OnIceGatheringChange(webrtc::PeerConnectionInterface::IceGatheringState new_state) override;
 
     void OnIceCandidate(const webrtc::IceCandidateInterface *candidate) override;
+
+private:
+
+    unique_ptr<webrtc::SessionDescriptionInterface> createSessionDescription(const string &type_str, const string &sdp);
 };
 
 

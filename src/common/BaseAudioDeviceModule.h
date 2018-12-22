@@ -1,11 +1,11 @@
 //
-// Created by anba8005 on 12/15/18.
+// Created by anba8005 on 12/22/18.
 //
 
-#ifndef GYVAITV_WEBRTC_FAKEAUDIODEVICEMODULE_H
-#define GYVAITV_WEBRTC_FAKEAUDIODEVICEMODULE_H
+#ifndef GYVAITV_WEBRTC_BASEAUDIODEVICEMODULE_H
+#define GYVAITV_WEBRTC_BASEAUDIODEVICEMODULE_H
 
-#include "rtc_base/basictypes.h"
+
 #include "rtc_base/criticalsection.h"
 #include "rtc_base/messagehandler.h"
 #include "rtc_base/scoped_ref_ptr.h"
@@ -13,23 +13,24 @@
 #include "common_types.h"
 #include "modules/audio_device/include/audio_device.h"
 
-/// This class implements a fake `AudioDeviceModule` that does absolutely nothing.
-class FakeAudioDeviceModule : public webrtc::AudioDeviceModule,
-                              public rtc::MessageHandler {
+/// This class implements an `AudioDeviceModule` that can be used to process
+/// arbitrary audio packets.
+///
+/// Note P postfix of a function indicates that it should only be called by the
+/// processing thread.
+class BaseAudioDeviceModule : public webrtc::AudioDeviceModule,
+                          public rtc::MessageHandler {
 public:
-    /// Creates a `FakeAudioDeviceModule` or returns NULL on failure.
-    static rtc::scoped_refptr<FakeAudioDeviceModule> Create();
+    typedef uint16_t Sample;
 
-    /// Following functions are inherited from `webrtc::AudioDeviceModule`.
-    /// Only functions called by `Peer` are implemented, the rest do
-    /// nothing and return success. If a function is not expected to be called
-    /// by `Peer` an assertion is triggered if it is in fact called.
-    // int64_t TimeUntilNextProcess() override;
-    // void Process() override;
+    /// Creates a `BaseAudioDeviceModule` or returns NULL on failure.
+    static rtc::scoped_refptr<BaseAudioDeviceModule> Create();
+
+    /// Handles input packets from the capture for sending.
+//    void onAudioCaptured(NDIlib_audio_frame_interleaved_16s_t audio_frame_16bpp_interleaved);
 
     int32_t ActiveAudioLayer(AudioLayer *audio_layer) const override;
 
-    /// Note: Calling this method from a callback may result in deadlock.
     int32_t RegisterAudioCallback(webrtc::AudioTransport *audio_callback) override;
 
     int32_t Init() override;
@@ -106,9 +107,9 @@ public:
 
     int32_t MicrophoneVolume(uint32_t *volume) const override;
 
-    int32_t MinMicrophoneVolume(uint32_t *min_volume) const override;
-
     int32_t MaxMicrophoneVolume(uint32_t *max_volume) const override;
+
+    int32_t MinMicrophoneVolume(uint32_t *min_volume) const override;
 
     int32_t SpeakerMuteIsAvailable(bool *available) override;
 
@@ -148,35 +149,40 @@ public:
 
     int32_t EnableBuiltInNS(bool enable) override { return -1; }
 
-#if defined(WEBRTC_IOS)
-    int GetPlayoutAudioParameters(webrtc::AudioParameters* params) const override
-    {
-        return -1;
-    }
-    int GetRecordAudioParameters(webrtc::AudioParameters* params) const override
-    {
-        return -1;
-    }
-#endif // WEBRTC_IOS
+    //
 
-    /// End of functions inherited from `webrtc::AudioDeviceModule`.
-
-    /// The following function is inherited from `rtc::MessageHandler`.
     void OnMessage(rtc::Message *msg) override;
 
 protected:
-    /// The constructor is protected because the class needs to be created as a
-    /// reference counted object (for memory managment reasons). It could be
-    /// exposed in which case the burden of proper instantiation would be put on
-    /// the creator of a FakeAudioDeviceModule instance. To create an instance of
-    /// this class use the `Create()` API.
-    explicit FakeAudioDeviceModule();
-
-    /// The destructor is protected because it is reference counted and should
-    /// not be deleted directly.
-    virtual ~FakeAudioDeviceModule();
+    explicit BaseAudioDeviceModule();
+    virtual ~BaseAudioDeviceModule();
 
 private:
+    /// Initializes the state of the `BaseAudioDeviceModule`. This API is called on
+    /// creation by the `Create()` API.
+    bool Initialize();
+
+    /// Returns true/false depending on if recording or playback has been
+    /// enabled/started.
+    bool shouldStartProcessing();
+
+    /// Starts or stops the pushing and pulling of audio frames.
+    void updateProcessing(bool start);
+
+    /// Starts the periodic calling of `ProcessFrame()` in a thread safe way.
+    void startProcessP();
+
+    /// Periodcally called function that ensures that frames are pulled and
+    /// pushed
+    /// periodically if enabled/started.
+    void processFrameP();
+
+    /// Pulls frames from the registered webrtc::AudioTransport.
+    void receiveFrameP();
+
+    /// Pushes frames to the registered webrtc::AudioTransport.
+    void sendFrameP();
+
     /// The time in milliseconds when Process() was last called or 0 if no call
     /// has been made.
     int64_t _lastProcessTimeMS;
@@ -195,9 +201,29 @@ private:
     /// the mic level so it just feeds back what it receives.
     uint32_t _currentMicLevel;
 
-    /// Protects variables for multithread access.
+    /// `_nextFrameTime` is updated in a non-drifting manner to indicate the
+    /// next wall clock time the next frame should be generated and received.
+    /// `_started` ensures that _nextFrameTime can be initialized properly on first call.
+    bool _started;
+    int64_t _nextFrameTime;
+
+    std::unique_ptr<rtc::Thread> _processThread;
+
+    /// A FIFO buffer that stores samples from the audio source to be sent.
+    //av::AudioBuffer _sendFifo;
+
+    /// A buffer with enough storage for a 10ms of samples to send.
+    std::vector<Sample> _sendSamples;
+    std::vector<Sample> _recvSamples;
+
+    /// Protects variables that are accessed from `_processThread` and
+    /// the main thread.
     rtc::CriticalSection _crit;
+
+    /// Protects |_audioCallback| that is accessed from `_processThread` and
+    /// the main thread.
+    rtc::CriticalSection _critCallback;
 };
 
 
-#endif //GYVAITV_WEBRTC_FAKEAUDIODEVICEMODULE_H
+#endif //GYVAITV_WEBRTC_BASEAUDIODEVICEMODULE_H
