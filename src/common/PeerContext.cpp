@@ -35,7 +35,7 @@ void PeerContext::setLocalDescription(const string &type_str, const string &sdp,
     try {
         auto description = this->createSessionDescription(type_str, sdp);
         auto observer = SetSessionDescriptionObserver::Create(signaling, COMMAND_SET_LOCAL_DESCRIPTION, correlation);
-        pc->SetRemoteDescription(observer, description.release());
+        pc->SetLocalDescription(observer, description.release());
     } catch (const runtime_error &error) {
         signaling->replyError(COMMAND_SET_LOCAL_DESCRIPTION, string(error.what()), correlation);
     }
