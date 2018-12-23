@@ -53,7 +53,6 @@ protected:
 
     shared_ptr<PeerFactoryContext> context;
     rtc::scoped_refptr<webrtc::PeerConnectionInterface> pc;
-    webrtc::FakeConstraints constraints;
 
     shared_ptr<Signaling> signaling;
 

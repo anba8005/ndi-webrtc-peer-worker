@@ -21,7 +21,7 @@ add_executable(
         src/common/Signaling.cpp src/common/Signaling.h
         src/common/Dispatcher.cpp src/common/Dispatcher.h
         src/receiving/RemotePeerContext.cpp src/receiving/RemotePeerContext.h
-        src/sending/LocalPeerContext.cpp src/sending/LocalPeerContext.h src/common/CreateSessionDescriptionObserver.cpp src/common/CreateSessionDescriptionObserver.h src/receiving/NDIWriter.cpp src/receiving/NDIWriter.h src/common/BaseAudioDeviceModule.cpp src/common/BaseAudioDeviceModule.h)
+        src/sending/LocalPeerContext.cpp src/sending/LocalPeerContext.h src/common/CreateSessionDescriptionObserver.cpp src/common/CreateSessionDescriptionObserver.h src/receiving/NDIWriter.cpp src/receiving/NDIWriter.h src/common/BaseAudioDeviceModule.cpp src/common/BaseAudioDeviceModule.h src/common/AudioBuffer.cpp src/common/AudioBuffer.h)
 
 target_link_libraries(gyvaitv_webrtc ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} avcodec avformat avutil swscale avdevice ndi pthread dl)
 target_include_directories(gyvaitv_webrtc PUBLIC ${WEBRTC_INCLUDE_DIR} /usr/local/share/webrtc/abseil-cpp/)

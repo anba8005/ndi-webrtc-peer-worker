@@ -12,6 +12,7 @@
 #include "rtc_base/thread.h"
 #include "common_types.h"
 #include "modules/audio_device/include/audio_device.h"
+#include "AudioBuffer.h"
 
 /// This class implements an `AudioDeviceModule` that can be used to process
 /// arbitrary audio packets.
@@ -27,7 +28,7 @@ public:
     static rtc::scoped_refptr<BaseAudioDeviceModule> Create();
 
     /// Handles input packets from the capture for sending.
-//    void onAudioCaptured(NDIlib_audio_frame_interleaved_16s_t audio_frame_16bpp_interleaved);
+    void feedRecorderData(const void* data, int numSamples);
 
     int32_t ActiveAudioLayer(AudioLayer *audio_layer) const override;
 
@@ -210,7 +211,7 @@ private:
     std::unique_ptr<rtc::Thread> _processThread;
 
     /// A FIFO buffer that stores samples from the audio source to be sent.
-    //av::AudioBuffer _sendFifo;
+    AudioBuffer _sendFifo;
 
     /// A buffer with enough storage for a 10ms of samples to send.
     std::vector<Sample> _sendSamples;

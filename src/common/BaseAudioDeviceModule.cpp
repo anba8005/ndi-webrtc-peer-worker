@@ -56,17 +56,16 @@ rtc::scoped_refptr<BaseAudioDeviceModule> BaseAudioDeviceModule::Create() {
     }
     return capture_module;
 }
+
 //
-//void BaseAudioDeviceModule::onAudioCaptured(NDIlib_audio_frame_interleaved_16s_t audio_frame_16bpp_interleaved) {
-//    // assert(_processThread->IsCurrent());
-//    rtc::CritScope cs(&_critCallback);
-//    if (!_audioCallback || !_recording) {
-//        return;
-//    }
-//
-//    auto data = audio_frame_16bpp_interleaved.p_data;
-//    _sendFifo.write((void **) &data, audio_frame_16bpp_interleaved.no_samples);
-//}
+void BaseAudioDeviceModule::feedRecorderData(const void *data, int numSamples) {
+    rtc::CritScope cs(&_critCallback);
+    if (!_audioCallback || !_recording) {
+        return;
+    }
+
+    _sendFifo.write((void **) &data, numSamples);
+}
 
 void BaseAudioDeviceModule::OnMessage(rtc::Message *msg) {
     switch (msg->message_id) {
@@ -85,8 +84,8 @@ void BaseAudioDeviceModule::OnMessage(rtc::Message *msg) {
 
 bool BaseAudioDeviceModule::Initialize() {
     // Allocate the send audio FIFO buffer
-//    _sendFifo.close();
-//    _sendFifo.alloc("s16", kNumberOfChannels);
+    _sendFifo.close();
+    _sendFifo.alloc("s16", kNumberOfChannels);
 
     _lastProcessTimeMS = rtc::TimeMillis();
     return true;
@@ -154,10 +153,9 @@ void BaseAudioDeviceModule::sendFrameP() {
     }
 
     auto samples = &_sendSamples[0];
-//    if (!_sendFifo.read((void **) &samples, kNumberSamples)) {
-//        //LDebug("No audio frames in send buffer")
-//        return;
-//    }
+    if (!_sendFifo.read((void **) &samples, kNumberSamples)) {
+        return;
+    }
 
     bool key_pressed = false;
     uint32_t current_mic_level = 0;
@@ -189,14 +187,13 @@ void BaseAudioDeviceModule::receiveFrameP() {
                                              kNumberOfChannels,
                                              kSamplesPerSecond,
                                              (void *) samples, nSamplesOut,
-                                             &elapsed_time_ms, &ntp_time_ms) !=
-            0) {
+                                             &elapsed_time_ms, &ntp_time_ms) != 0) {
             assert(false);
         }
-        if (nSamplesOut == kNumberSamples) {
+        if (nSamplesOut != kNumberSamples * kNumberOfChannels) {
             std::cerr << nSamplesOut << std::endl;
         }
-     }
+    }
 }
 
 int32_t BaseAudioDeviceModule::ActiveAudioLayer(AudioLayer * /*audio_layer*/) const {
