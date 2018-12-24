@@ -9,19 +9,31 @@
 
 #include "pc/peerconnectionfactory.h"
 
+#include "BaseAudioDeviceModule.h"
+#include "VideoDeviceModule.h"
 
 class PeerFactoryContext {
 public:
     PeerFactoryContext();
 
-    webrtc::AudioDeviceModule *getADM();
+    BaseAudioDeviceModule *getADM();
+    VideoDeviceModule *getVDM();
 
     rtc::scoped_refptr<webrtc::PeerConnectionInterface>
     createPeerConnection(webrtc::PeerConnectionObserver *observer);
 
+    rtc::scoped_refptr<webrtc::AudioTrackInterface>
+    createAudioTrack(cricket::AudioOptions options, const char *label = "audio");
+
+    rtc::scoped_refptr<webrtc::VideoTrackInterface>
+    createVideoTrack(const char *label = "video");
+
 private:
     webrtc::PeerConnectionInterface::RTCConfiguration config;
-    rtc::scoped_refptr<webrtc::AudioDeviceModule> adm;
+    //
+    rtc::scoped_refptr<BaseAudioDeviceModule> adm;
+    rtc::scoped_refptr<VideoDeviceModule> vdm;
+    //
     rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> factory;
     //
     std::unique_ptr<rtc::Thread> networkThread;

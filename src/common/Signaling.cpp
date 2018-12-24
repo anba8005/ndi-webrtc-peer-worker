@@ -67,6 +67,8 @@ void Signaling::replyError(const string command, string error, const int64_t cor
 void Signaling::state(const string command, json payload) {
     json j;
     j["command"] = command;
-    j["payload"] = payload;
+    if (payload != nullptr) {
+        j["payload"] = payload;
+    }
     send(j.dump());
 }

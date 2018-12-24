@@ -19,12 +19,18 @@ public:
     void end() override;
 
 protected:
+    void OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,
+                    const vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>> &streams) override;
+
+    void OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) override;
+
+protected:
 
     // inherited from PeerConnectionObserver
 
-    void OnAddStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) override;
-
-    void OnRemoveStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) override;
+//    void OnAddStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) override;
+//
+//    void OnRemoveStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) override;
 
 private:
 

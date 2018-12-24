@@ -13,7 +13,6 @@
 #include "p2p/base/basicpacketsocketfactory.h"
 #include "p2p/client/basicportallocator.h"
 #include "pc/peerconnection.h"
-#include "BaseAudioDeviceModule.h"
 
 PeerFactoryContext::PeerFactoryContext() {
 
@@ -24,11 +23,14 @@ PeerFactoryContext::PeerFactoryContext() {
         throw std::runtime_error("Failed to start WebRTC threads");
 
     // Create audio device module
-    this->adm = workerThread->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule>>
+    this->adm = workerThread->Invoke<rtc::scoped_refptr<BaseAudioDeviceModule>>
             (RTC_FROM_HERE,
              []() {
                  return BaseAudioDeviceModule::Create();
              });
+
+    // create video device module
+    vdm = VideoDeviceModule::Create();
 
     // Create the factory
     factory = webrtc::CreatePeerConnectionFactory(
@@ -54,8 +56,12 @@ PeerFactoryContext::PeerFactoryContext() {
     socketFactory.reset(new rtc::BasicPacketSocketFactory(networkThread.get()));
 }
 
-webrtc::AudioDeviceModule *PeerFactoryContext::getADM() {
+BaseAudioDeviceModule *PeerFactoryContext::getADM() {
     return adm;
+}
+
+VideoDeviceModule *PeerFactoryContext::getVDM() {
+    return vdm;
 }
 
 rtc::scoped_refptr<webrtc::PeerConnectionInterface>
@@ -64,5 +70,19 @@ PeerFactoryContext::createPeerConnection(webrtc::PeerConnectionObserver *observe
     if (!pc)
         throw std::runtime_error("Failed to create WebRTC peer connection");
     return pc;
+}
+
+rtc::scoped_refptr<webrtc::AudioTrackInterface>
+PeerFactoryContext::createAudioTrack(cricket::AudioOptions options, const char *label) {
+    rtc::scoped_refptr<webrtc::AudioTrackInterface> audioTrack(
+            factory->CreateAudioTrack(label, factory->CreateAudioSource(
+                    options)));
+    return audioTrack;
+}
+
+rtc::scoped_refptr<webrtc::VideoTrackInterface>
+PeerFactoryContext::createVideoTrack(const char *label) {
+    rtc::scoped_refptr<webrtc::VideoTrackInterface> videoTrack(factory->CreateVideoTrack(label, vdm));
+    return videoTrack;
 }
 

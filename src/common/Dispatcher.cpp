@@ -18,14 +18,14 @@ Dispatcher::Dispatcher(shared_ptr<Signaling> signaling, shared_ptr<PeerContext> 
 void Dispatcher::run() {
     peer->start();
     //
-    thread dispatcherThread(&Dispatcher::dispatch, this);
+    thread runner(&Dispatcher::dispatch, this);
     //
     while (!this->finished.load()) {
         peer->processMessages();
         signaling->commitBuffer();
     }
     //
-    dispatcherThread.join();
+    runner.join();
     //
     peer->end();
 }
@@ -73,7 +73,7 @@ void Dispatcher::exec(string command, int64_t correlation, json payload) {
         peer->setLocalDescription(type, sdp, correlation);
     } else if (command == COMMAND_CREATE_OFFER) {
         //
-
+        peer->createOffer(correlation);
         //
     } else if (command == COMMAND_CREATE_ANSWER) {
         //

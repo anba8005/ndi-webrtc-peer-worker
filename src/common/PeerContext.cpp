@@ -45,9 +45,20 @@ void PeerContext::createAnswer(int64_t correlation) {
     webrtc::PeerConnectionInterface::RTCOfferAnswerOptions options;
     options.offer_to_receive_video = webrtc::PeerConnectionInterface::RTCOfferAnswerOptions::kOfferToReceiveMediaTrue;
     options.offer_to_receive_audio = webrtc::PeerConnectionInterface::RTCOfferAnswerOptions::kOfferToReceiveMediaTrue;
+    options.voice_activity_detection = false;
     //
     auto observer = CreateSessionDescriptionObserver::Create(signaling, COMMAND_CREATE_ANSWER, correlation);
     pc->CreateAnswer(observer, options);
+}
+
+void PeerContext::createOffer(int64_t correlation) {
+    webrtc::PeerConnectionInterface::RTCOfferAnswerOptions options;
+    options.offer_to_receive_video = 0;
+    options.offer_to_receive_audio = 0;
+    options.voice_activity_detection = false;
+    //
+    auto observer = CreateSessionDescriptionObserver::Create(signaling, COMMAND_CREATE_OFFER, correlation);
+    pc->CreateOffer(observer, options);
 }
 
 
@@ -79,7 +90,7 @@ void PeerContext::OnDataChannel(rtc::scoped_refptr<webrtc::DataChannelInterface>
 }
 
 void PeerContext::OnRenegotiationNeeded() {
-    cerr << "RENEGOTIATION ----------=====================------------" << endl;
+    // cerr << "RENEGOTIATION ----------=====================------------" << endl;
 }
 
 void PeerContext::OnIceConnectionChange(webrtc::PeerConnectionInterface::IceConnectionState new_state) {
@@ -129,4 +140,27 @@ PeerContext::createSessionDescription(const string &type_str, const string &sdp)
         throw runtime_error("Can't parse SDP: " + error.description);
     }
     return session_description;
+}
+
+void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,
+                             const vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>> &streams) {
+    auto track = receiver->track();
+    json payload;
+    payload["kind"] = track->kind();
+    payload["id"] = track->id();
+    //
+    json streamsJson = json::array();
+    for (auto stream : streams) {
+        json j;
+        j["id"] = stream->id();
+        streamsJson.push_back(j);
+    }
+    payload["streams"] = streamsJson;
+
+    //
+    signaling->state("OnAddTrack", payload);
+}
+
+void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) {
+
 }

@@ -28,7 +28,7 @@ public:
 
     void replyError(const string command, string error, int64_t correlation);
 
-    void state(const string command, json payload);
+    void state(const string command, json payload = nullptr);
 
 private:
     std::mutex mutex;

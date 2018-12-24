@@ -7,6 +7,8 @@
 
 #include "../common/PeerContext.h"
 
+#include "NDIReader.h"
+
 class LocalPeerContext : public PeerContext {
 public:
     LocalPeerContext(shared_ptr<Signaling> signaling);
@@ -16,6 +18,10 @@ public:
     void start() override;
 
     void end() override;
+private:
+    unique_ptr<NDIReader> reader;
+
+    void addTracks();
 
 };
 

@@ -49,6 +49,8 @@ public:
 
     void createAnswer(int64_t correlation);
 
+    void createOffer(int64_t correlation);
+
 protected:
 
     shared_ptr<PeerFactoryContext> context;
@@ -69,6 +71,11 @@ protected:
     void OnIceGatheringChange(webrtc::PeerConnectionInterface::IceGatheringState new_state) override;
 
     void OnIceCandidate(const webrtc::IceCandidateInterface *candidate) override;
+
+    void OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,
+                    const vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>> &streams) override;
+
+    void OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) override;
 
 private:
 

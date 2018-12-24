@@ -15,7 +15,7 @@ RemotePeerContext::~RemotePeerContext() {
 }
 
 void RemotePeerContext::start() {
-    writer.reset(new NDIWriter("TEST",1280,720));
+    writer = make_unique<NDIWriter>("TEST",1280,720);
     //
     context = make_shared<PeerFactoryContext>();
     //
@@ -30,17 +30,42 @@ void RemotePeerContext::end() {
 
 }
 
-void RemotePeerContext::OnAddStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) {
-    cerr << "ON ADD STREAM" << endl;
-    auto videoTracks = stream->GetVideoTracks();
-    if (!videoTracks.empty())
-        writer->setVideoTrack(videoTracks[0]);
-
-    auto audioTracks = stream->GetAudioTracks();
-    if (!audioTracks.empty())
-        writer->setAudioTrack(audioTracks[0]);
+void RemotePeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,
+                                   const vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>> &streams) {
+    PeerContext::OnAddTrack(receiver, streams);
+    //
+    auto track = receiver->track();
+    if (track->kind() == track->kVideoKind) {
+        writer->setVideoTrack(dynamic_cast<webrtc::VideoTrackInterface*>(track.release()));
+    } else if (track->kind() == track->kAudioKind) {
+        writer->setAudioTrack(dynamic_cast<webrtc::AudioTrackInterface*>(track.release()));
+    }
 }
 
-void RemotePeerContext::OnRemoveStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) {
-    cerr << "ON REMOVE STREAM" << endl;
+void RemotePeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) {
+    PeerContext::OnRemoveTrack(receiver);
+    //
+    auto track = receiver->track();
+    if (track->kind() == track->kVideoKind) {
+        writer->setVideoTrack(nullptr);
+    } else if (track->kind() == track->kAudioKind) {
+        writer->setAudioTrack(nullptr);
+    }
+
 }
+
+//void RemotePeerContext::OnAddStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) {
+//    cerr << "ON ADD STREAM" << endl;
+//    auto videoTracks = stream->GetVideoTracks();
+//
+//    if (!videoTracks.empty())
+//        writer->setVideoTrack(videoTracks[0]);
+//
+//    auto audioTracks = stream->GetAudioTracks();
+//    if (!audioTracks.empty())
+//        writer->setAudioTrack(audioTracks[0]);
+//}
+//
+//void RemotePeerContext::OnRemoveStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) {
+//    cerr << "ON REMOVE STREAM" << endl;
+//}
