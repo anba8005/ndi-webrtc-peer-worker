@@ -10,7 +10,8 @@ const AVPixelFormat WEBRTC_PIXEL_FORMAT = av_get_pix_fmt("yuv420p");
 const AVPixelFormat NDI_PIXEL_FORMAT = av_get_pix_fmt("uyvy422");
 
 VideoDeviceModule::VideoDeviceModule() : AdaptedVideoTrackSource(),
-                                         _scaling_context(nullptr) {}
+                                         _scaling_context(nullptr) {
+}
 
 VideoDeviceModule::~VideoDeviceModule() {
     if (_scaling_context) {
@@ -18,10 +19,26 @@ VideoDeviceModule::~VideoDeviceModule() {
     }
 }
 
-void VideoDeviceModule::feedFrame(const int width, const int height, const uint8_t *data,const int linesize) {
+void
+VideoDeviceModule::feedFrame(int width, int height, const uint8_t *data, const int linesize, const int64_t timestamp) {
+    // adapt frame
+    int out_width = 0;
+    int out_height = 0;
+    int crop_width = 0;
+    int crop_height = 0;
+    int crop_x = 0;
+    int crop_y = 0;
+    int64_t time_us = timestamp / ((int64_t) 10);
+    bool result = AdaptFrame(width, height, time_us, &out_width, &out_height, &crop_width, &crop_height, &crop_x,
+                             &crop_y);
+    if (!result) {
+        std::cerr << "skip frame" << std::endl;
+        return;
+    }
+
     // get scaling context
     _scaling_context = sws_getCachedContext(_scaling_context, width, height, NDI_PIXEL_FORMAT,
-                                            width, height, WEBRTC_PIXEL_FORMAT, SWS_BICUBIC,
+                                            out_width, out_height, WEBRTC_PIXEL_FORMAT, SWS_BICUBIC,
                                             nullptr, nullptr, nullptr);
     if (!_scaling_context) {
         std::cerr << "Scaling context creation error" << std::endl;
@@ -29,8 +46,8 @@ void VideoDeviceModule::feedFrame(const int width, const int height, const uint8
     }
 
     // check/create webrtc buffer
-    if (!_webrtc_buffer || _webrtc_buffer->height() != height || _webrtc_buffer->width() != width) {
-        _webrtc_buffer = webrtc::I420Buffer::Create(width, height);
+    if (!_webrtc_buffer || _webrtc_buffer->height() != out_height || _webrtc_buffer->width() != out_width) {
+        _webrtc_buffer = webrtc::I420Buffer::Create(out_width, out_height);
     }
 
     // prepare webrtc_data for scaling
@@ -54,9 +71,10 @@ void VideoDeviceModule::feedFrame(const int width, const int height, const uint8
         return;
     }
 
-    // send frame to webrtc engine
-    webrtc::VideoFrame frame(_webrtc_buffer, 0, 0, webrtc::VideoRotation::kVideoRotation_0);
-    OnFrame(frame);
+    // build
+    webrtc::VideoFrame::Builder builder;
+    OnFrame(builder.set_video_frame_buffer(_webrtc_buffer).set_timestamp_us(time_us).set_rotation(
+            webrtc::VideoRotation::kVideoRotation_0).build());
 }
 
 bool VideoDeviceModule::is_screencast() const {
@@ -78,5 +96,6 @@ bool VideoDeviceModule::remote() const {
 rtc::scoped_refptr<VideoDeviceModule> VideoDeviceModule::Create() {
     return new rtc::RefCountedObject<VideoDeviceModule>();
 }
+
 
 

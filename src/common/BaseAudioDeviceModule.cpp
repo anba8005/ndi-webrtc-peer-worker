@@ -24,11 +24,6 @@ static const int kTimePerFrameMs = 10;
 static const int kTotalDelayMs = 0;
 static const int kClockDriftMs = 0;
 static const uint32_t kMaxVolume = 14392;
-//
-//// Same value as src/modules/audio_device/main/source/audio_device_config.h in
-//// https://code.google.com/p/webrtc/
-//static const int kAdmMaxIdleTimeProcess = 1000;
-
 
 enum {
     MSG_START_PROCESS,
@@ -59,11 +54,17 @@ rtc::scoped_refptr<BaseAudioDeviceModule> BaseAudioDeviceModule::Create() {
 
 //
 void BaseAudioDeviceModule::feedRecorderData(const void *data, int numSamples) {
-    rtc::CritScope cs(&_critCallback);
-    if (!_audioCallback || !_recording) {
-        return;
+    {
+        rtc::CritScope cs1(&_crit);
+        if (!_recording)
+            return;
     }
 
+    rtc::CritScope cs(&_critCallback);
+
+    if (!_audioCallback) {
+        return;
+    }
     _sendFifo.write((void **) &data, numSamples);
 }
 

@@ -14,7 +14,7 @@
 using namespace std;
 
 int main(int argc, char **argv) {
-    rtc::LogMessage::LogToDebug(rtc::LS_ERROR);
+    rtc::LogMessage::LogToDebug(rtc::LS_INFO);
     rtc::LogMessage::LogTimestamps();
     rtc::LogMessage::LogThreads();
     rtc::InitializeSSL();

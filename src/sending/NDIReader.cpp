@@ -115,7 +115,7 @@ void NDIReader::run() {
                 // send
                 if (vdm)
                     vdm->feedFrame(video_frame.xres, video_frame.yres, video_frame.p_data,
-                                   video_frame.line_stride_in_bytes);
+                                   video_frame.line_stride_in_bytes, video_frame.timestamp);
                 // free
                 NDIlib_recv_free_video_v2(_pNDI_recv, &video_frame);
                 break;

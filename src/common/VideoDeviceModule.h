@@ -8,6 +8,12 @@
 #include "media/base/adaptedvideotracksource.h"
 #include "api/video/i420_buffer.h"
 
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
+
+
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
@@ -27,7 +33,10 @@ public:
     SourceState state() const override;
     bool remote() const override;
 
-    void feedFrame(const int width, const int height, const uint8_t *data,const int linesize);
+    void feedFrame(int width, int height, const uint8_t *data,const int linesize, int64_t timestamp);
+
+protected:
+
 
 private:
 
