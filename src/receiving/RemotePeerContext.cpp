@@ -27,7 +27,7 @@ void RemotePeerContext::start() {
 }
 
 void RemotePeerContext::end() {
-
+    pc->Close();
 }
 
 void RemotePeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,

@@ -12,8 +12,6 @@
 #include "BaseAudioDeviceModule.h"
 #include "VideoDeviceModule.h"
 
-#include "VideoCapturer.h"
-
 class PeerFactoryContext {
 public:
     PeerFactoryContext();
@@ -26,9 +24,6 @@ public:
 
     rtc::scoped_refptr<webrtc::AudioTrackInterface>
     createAudioTrack(cricket::AudioOptions options, const char *label = "audio");
-
-    rtc::scoped_refptr<webrtc::VideoTrackInterface>
-    createVideoTrack(std::unique_ptr<cricket::VideoCapturer> capturer, const char *label = "video");
 
     rtc::scoped_refptr<webrtc::VideoTrackInterface>
     createVideoTrack(const char *label = "video");

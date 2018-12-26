@@ -34,6 +34,11 @@ void Dispatcher::dispatch() {
     while (!this->finished.load()) {
         // get command line
         string commandLine = signaling->receive();
+        //
+        if (commandLine == "STOP") {
+            finished = true;
+            break;
+        }
         // decode
         json root;
         try {

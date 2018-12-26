@@ -29,7 +29,7 @@ void LocalPeerContext::start() {
 }
 
 void LocalPeerContext::end() {
-
+    pc->Close();
 }
 
 void LocalPeerContext::addTracks() {

@@ -20,7 +20,7 @@
 
 PeerFactoryContext::PeerFactoryContext() {
     //
-    webrtc::field_trial::InitFieldTrialsFromString("WebRTC-FlexFEC-03-Advertised/WebRTC-FlexFEC-03/");
+    //webrtc::field_trial::InitFieldTrialsFromString("WebRTC-FlexFEC-03-Advertised/WebRTC-FlexFEC-03/");
 
     // Setup threads
     networkThread = rtc::Thread::CreateWithSocketServer();
@@ -91,16 +91,6 @@ PeerFactoryContext::createAudioTrack(cricket::AudioOptions options, const char *
     rtc::scoped_refptr<webrtc::AudioTrackInterface> audioTrack(
             factory->CreateAudioTrack(label, factory->CreateAudioSource(options)));
     return audioTrack;
-}
-
-rtc::scoped_refptr<webrtc::VideoTrackInterface>
-PeerFactoryContext::createVideoTrack(std::unique_ptr<cricket::VideoCapturer> capturer, const char *label) {
-//    std::unique_ptr<cricket::VideoCapturer> capturer;
-//    capturer.reset(new VideoCapturer());
-//
-    rtc::scoped_refptr<webrtc::VideoTrackInterface> videoTrack(
-            factory->CreateVideoTrack(label, factory->CreateVideoSource(std::move(capturer))));
-    return videoTrack;
 }
 
 rtc::scoped_refptr<webrtc::VideoTrackInterface>
