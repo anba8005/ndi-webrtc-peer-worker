@@ -10,8 +10,8 @@
 #include <string>
 
 #include <Processing.NDI.Lib.h>
-#include "../common/VideoDeviceModule.h"
-#include "../common/BaseAudioDeviceModule.h"
+#include "VideoDeviceModule.h"
+#include "BaseAudioDeviceModule.h"
 
 class NDIReader {
 public:

@@ -67,39 +67,44 @@ NDIWriter::~NDIWriter() {
         sws_freeContext(_scaling_context);
 }
 
-void NDIWriter::setVideoTrack(webrtc::VideoTrackInterface* track) {
+void NDIWriter::setVideoTrack(webrtc::VideoTrackInterface *track) {
     _videoTrack = track;
-    _videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
-    std::cerr << "Video track changed" << std::endl;
+    if (track) {
+        _videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
+        std::cerr << "Video track changed" << std::endl;
+    }
 }
 
-void NDIWriter::setAudioTrack(webrtc::AudioTrackInterface* track) {
+void NDIWriter::setAudioTrack(webrtc::AudioTrackInterface *track) {
     _audioTrack = track;
-    _audioTrack->AddSink(this);
-    std::cerr << "Audio track changed" << std::endl;
+    if (track) {
+        _audioTrack->AddSink(this);
+        std::cerr << "Audio track changed" << std::endl;
+    }
 }
 
-void NDIWriter::OnFrame(const webrtc::VideoFrame& yuvframe) {
+void NDIWriter::OnFrame(const webrtc::VideoFrame &yuvframe) {
 //	std::cerr << "On video frame: " << yuvframe.width() << 'x' << yuvframe.height() << '@' << yuvframe.timestamp()
 //			  << std::endl;
 
     // get scaling context
-    _scaling_context = sws_getCachedContext(_scaling_context,yuvframe.width(), yuvframe.height(), _src_pixel_format,
-                                            _NDI_video_frame.xres, _NDI_video_frame.yres, _ndi_pixel_format, SWS_BICUBIC, nullptr, nullptr, nullptr);
+    _scaling_context = sws_getCachedContext(_scaling_context, yuvframe.width(), yuvframe.height(), _src_pixel_format,
+                                            _NDI_video_frame.xres, _NDI_video_frame.yres, _ndi_pixel_format,
+                                            SWS_BICUBIC, nullptr, nullptr, nullptr);
 
     // get src data & linesizes
     auto yuvbuffer = yuvframe.video_frame_buffer()->GetI420();
-    uint8_t* data[8];
-    data[0] = (uint8_t*)yuvbuffer->DataY();
-    data[1] = (uint8_t*)yuvbuffer->DataU();
-    data[2] = (uint8_t*)yuvbuffer->DataV();
+    uint8_t *data[8];
+    data[0] = (uint8_t *) yuvbuffer->DataY();
+    data[1] = (uint8_t *) yuvbuffer->DataU();
+    data[2] = (uint8_t *) yuvbuffer->DataV();
     int linesize[8];
     linesize[0] = yuvbuffer->StrideY();
     linesize[1] = yuvbuffer->StrideU();
     linesize[2] = yuvbuffer->StrideV();
 
     // get ndi dst frame
-    AVFrame* frame = _p_frame_buffers[_p_frame_buffer_idx];
+    AVFrame *frame = _p_frame_buffers[_p_frame_buffer_idx];
     _p_frame_buffer_idx = _p_frame_buffer_idx == 0 ? 1 : 0;
 
     // scale
@@ -117,7 +122,7 @@ void NDIWriter::OnFrame(const webrtc::VideoFrame& yuvframe) {
 }
 
 
-void NDIWriter::OnData(const void* audio_data, int bits_per_sample,
+void NDIWriter::OnData(const void *audio_data, int bits_per_sample,
                        int sample_rate, size_t number_of_channels,
                        size_t number_of_frames) {
 //	std::cerr << "On audio frame: "
@@ -131,19 +136,19 @@ void NDIWriter::OnData(const void* audio_data, int bits_per_sample,
     NDI_audio_frame.sample_rate = sample_rate;
     NDI_audio_frame.no_channels = number_of_channels;
     NDI_audio_frame.no_samples = number_of_frames * (number_of_channels << 1); //  from ffmpeg
-    NDI_audio_frame.p_data = (int16_t*) audio_data;
+    NDI_audio_frame.p_data = (int16_t *) audio_data;
 
     // send
     NDIlib_util_send_send_audio_interleaved_16s(_pNDI_send, &NDI_audio_frame);
 }
 
-AVFrame* NDIWriter::createVideoFrame(AVPixelFormat pixelFmt, int width, int height, bool alloc) {
-    AVFrame* picture = av_frame_alloc();
+AVFrame *NDIWriter::createVideoFrame(AVPixelFormat pixelFmt, int width, int height, bool alloc) {
+    AVFrame *picture = av_frame_alloc();
     if (!picture)
         return nullptr;
 
     int size = av_image_get_buffer_size(pixelFmt, width, height, 16);
-    uint8_t* buffer = nullptr;
+    uint8_t *buffer = nullptr;
     if (alloc) {
         buffer = reinterpret_cast<uint8_t *>(av_malloc(size));
         if (!buffer) {

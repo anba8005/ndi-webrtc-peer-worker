@@ -16,6 +16,25 @@ PeerContext::~PeerContext() {
 
 }
 
+void PeerContext::start() {
+//    writer = make_unique<NDIWriter>("TEST",1280,720);
+    //
+    reader = make_unique<NDIReader>("ANBA8005-OLD (OBS2)");
+    reader->open();
+    //
+    context = make_shared<PeerFactoryContext>();
+    pc = context->createPeerConnection(this);
+    //
+    addTracks();
+//    signaling->state("OnNegotiationNeeded");
+    //
+    reader->start(context->getVDM(), context->getADM());
+}
+
+void PeerContext::end() {
+    pc->Close();
+}
+
 void PeerContext::processMessages() {
     auto rtcThread = rtc::Thread::Current();
     rtcThread->ProcessMessages(100);
@@ -115,11 +134,48 @@ void PeerContext::OnIceCandidate(const webrtc::IceCandidateInterface *candidate)
     json payload;
     payload["sdpMid"] = candidate->sdp_mid();
     payload["sdpMLineIndex"] = candidate->sdp_mline_index();
-    payload["sdp"] = sdp;
+    payload["candidate"] = sdp;
     signaling->state("OnIceCandidate", payload);
 }
 
+void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,
+                             const vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>> &streams) {
+    auto track = receiver->track();
+    json payload;
+    payload["kind"] = track->kind();
+    payload["id"] = track->id();
+    //
+    json streamsJson = json::array();
+    for (auto stream : streams) {
+        json j;
+        j["id"] = stream->id();
+        streamsJson.push_back(j);
+    }
+    payload["streams"] = streamsJson;
+    //
+    signaling->state("OnAddTrack", payload);
+    //
+    if (track->kind() == track->kVideoKind) {
+        writer->setVideoTrack(dynamic_cast<webrtc::VideoTrackInterface*>(track.release()));
+    } else if (track->kind() == track->kAudioKind) {
+        writer->setAudioTrack(dynamic_cast<webrtc::AudioTrackInterface*>(track.release()));
+    }
+}
 
+void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) {
+    auto track = receiver->track();
+    json payload;
+    payload["kind"] = track->kind();
+    payload["id"] = track->id();
+    //
+    signaling->state("OnRemoveTrack", payload);
+    //
+    if (track->kind() == track->kVideoKind) {
+        writer->setVideoTrack(nullptr);
+    } else if (track->kind() == track->kAudioKind) {
+        writer->setAudioTrack(nullptr);
+    }
+}
 
 //
 //
@@ -142,25 +198,30 @@ PeerContext::createSessionDescription(const string &type_str, const string &sdp)
     return session_description;
 }
 
-void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,
-                             const vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>> &streams) {
-    auto track = receiver->track();
-    json payload;
-    payload["kind"] = track->kind();
-    payload["id"] = track->id();
-    //
-    json streamsJson = json::array();
-    for (auto stream : streams) {
-        json j;
-        j["id"] = stream->id();
-        streamsJson.push_back(j);
+void PeerContext::addTracks() {
+    // create audio options
+    cricket::AudioOptions options;
+    options.auto_gain_control = false;
+    options.noise_suppression = false;
+    options.highpass_filter = false;
+    options.echo_cancellation = false;
+    options.typing_detection = false;
+    options.residual_echo_detector = false;
+
+    // add audio track
+    auto audioTrack = context->createAudioTrack(options);
+    auto videoResult = pc->AddTrack(audioTrack, {"stream"});
+    if (!videoResult.ok()) {
+        throw std::runtime_error(
+                "Failed to add audio track to PeerConnection:" + string(videoResult.error().message()));
     }
-    payload["streams"] = streamsJson;
 
-    //
-    signaling->state("OnAddTrack", payload);
-}
-
-void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) {
-
+    // add video track
+    auto videoTrack = context->createVideoTrack();
+    videoTrack->set_content_hint(webrtc::VideoTrackInterface::ContentHint::kFluid);
+    auto audioResult = pc->AddTrack(videoTrack, {"stream"});
+    if (!audioResult.ok()) {
+        throw std::runtime_error(
+                "Failed to add video track to PeerConnection:" + string(audioResult.error().message()));
+    }
 }

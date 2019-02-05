@@ -14,6 +14,8 @@
 #include "api/peerconnectioninterface.h"
 #include "PeerFactoryContext.h"
 #include "api/test/fakeconstraints.h"
+#include "NDIWriter.h"
+#include "NDIReader.h"
 
 using namespace std;
 
@@ -31,11 +33,9 @@ public:
 
     //
 
-    virtual void start() = 0;
+    void start();
 
-    virtual void end() = 0;
-
-    //
+    void end();
 
     void processMessages();
 
@@ -80,6 +80,12 @@ protected:
 private:
 
     unique_ptr<webrtc::SessionDescriptionInterface> createSessionDescription(const string &type_str, const string &sdp);
+
+    unique_ptr<NDIWriter> writer;
+
+    unique_ptr<NDIReader> reader;
+
+    void addTracks();
 };
 
 
