@@ -24,6 +24,7 @@ const string COMMAND_SET_REMOTE_DESCRIPTION = "setRemoteDescription";
 const string COMMAND_ADD_ICE_CANDIDATE = "addIceCandidate";
 const string COMMAND_CREATE_OFFER = "createOffer";
 const string COMMAND_CREATE_ANSWER = "createAnswer";
+const string COMMAND_CREATE_DATA_CHANNEL = "createDataChannel";
 
 class PeerContext : public webrtc::PeerConnectionObserver {
 public:
@@ -51,10 +52,13 @@ public:
 
     void createOffer(int64_t correlation);
 
+    void createDataChannel(const string &name, int64_t correlation);
+
 protected:
 
     shared_ptr<PeerFactoryContext> context;
     rtc::scoped_refptr<webrtc::PeerConnectionInterface> pc;
+    rtc::scoped_refptr<webrtc::DataChannelInterface> dc;
 
     shared_ptr<Signaling> signaling;
 
@@ -86,6 +90,8 @@ private:
     unique_ptr<NDIReader> reader;
 
     void addTracks();
+
+    size_t totalTracks;
 };
 
 

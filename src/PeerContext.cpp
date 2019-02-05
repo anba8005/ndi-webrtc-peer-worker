@@ -8,27 +8,28 @@
 
 #include <iostream>
 
-PeerContext::PeerContext(shared_ptr<Signaling> signaling) : signaling(signaling) {
+PeerContext::PeerContext(shared_ptr<Signaling> signaling) : signaling(signaling), totalTracks(0) {
 
 }
 
 PeerContext::~PeerContext() {
-
+    // TODO
+    1. getstats - kad veiktu "connected"
+    2. ondatachannel + proper datachannel observer - kad veiktu "connected"
+    3. command line options (reader name,e.t.c)
+    4. reader & writer refactoring (dynamic dimesnions)
+    5. addtrack removetrack - dynamic reader streams ?
 }
 
 void PeerContext::start() {
-//    writer = make_unique<NDIWriter>("TEST",1280,720);
     //
     reader = make_unique<NDIReader>("ANBA8005-OLD (OBS2)");
     reader->open();
-    //
+//    //
     context = make_shared<PeerFactoryContext>();
     pc = context->createPeerConnection(this);
     //
     addTracks();
-//    signaling->state("OnNegotiationNeeded");
-    //
-    reader->start(context->getVDM(), context->getADM());
 }
 
 void PeerContext::end() {
@@ -72,8 +73,8 @@ void PeerContext::createAnswer(int64_t correlation) {
 
 void PeerContext::createOffer(int64_t correlation) {
     webrtc::PeerConnectionInterface::RTCOfferAnswerOptions options;
-    options.offer_to_receive_video = 0;
-    options.offer_to_receive_audio = 0;
+    options.offer_to_receive_video = webrtc::PeerConnectionInterface::RTCOfferAnswerOptions::kOfferToReceiveMediaTrue;
+    options.offer_to_receive_audio = webrtc::PeerConnectionInterface::RTCOfferAnswerOptions::kOfferToReceiveMediaTrue;
     options.voice_activity_detection = false;
     //
     auto observer = CreateSessionDescriptionObserver::Create(signaling, COMMAND_CREATE_OFFER, correlation);
@@ -93,6 +94,12 @@ void PeerContext::addIceCandidate(const string &mid, int mlineindex, const strin
     }
 }
 
+void PeerContext::createDataChannel(const string &name, int64_t correlation) {
+    webrtc::DataChannelInit config;
+    dc = pc->CreateDataChannel(name,&config);
+    signaling->replyOk(COMMAND_ADD_ICE_CANDIDATE, correlation);
+}
+
 //
 //
 //
@@ -105,11 +112,11 @@ void PeerContext::OnSignalingChange(webrtc::PeerConnectionInterface::SignalingSt
 
 void PeerContext::OnDataChannel(rtc::scoped_refptr<webrtc::DataChannelInterface> data_channel) {
     json payload;
+    std::cerr << "ON DATA CHANNEL" << std::endl;
     signaling->state("OnDataChannel", payload);
 }
 
 void PeerContext::OnRenegotiationNeeded() {
-    // cerr << "RENEGOTIATION ----------=====================------------" << endl;
 }
 
 void PeerContext::OnIceConnectionChange(webrtc::PeerConnectionInterface::IceConnectionState new_state) {
@@ -122,6 +129,9 @@ void PeerContext::OnIceGatheringChange(webrtc::PeerConnectionInterface::IceGathe
     json payload;
     payload["state"] = new_state;
     signaling->state("OnIceGatheringChange", payload);
+    // start reader on connection
+    if (new_state == webrtc::PeerConnectionInterface::IceGatheringState::kIceGatheringComplete && reader)
+        reader->start(context->getVDM(), context->getADM());
 }
 
 void PeerContext::OnIceCandidate(const webrtc::IceCandidateInterface *candidate) {
@@ -140,6 +150,7 @@ void PeerContext::OnIceCandidate(const webrtc::IceCandidateInterface *candidate)
 
 void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,
                              const vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>> &streams) {
+    std::cerr << "on add track -----------------------" << std::endl;
     auto track = receiver->track();
     json payload;
     payload["kind"] = track->kind();
@@ -155,14 +166,20 @@ void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> re
     //
     signaling->state("OnAddTrack", payload);
     //
+    if (!writer)
+        writer = make_unique<NDIWriter>("TEST",1280,720);
+    //
     if (track->kind() == track->kVideoKind) {
         writer->setVideoTrack(dynamic_cast<webrtc::VideoTrackInterface*>(track.release()));
     } else if (track->kind() == track->kAudioKind) {
         writer->setAudioTrack(dynamic_cast<webrtc::AudioTrackInterface*>(track.release()));
     }
+    //
+    totalTracks++;
 }
 
 void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) {
+    std::cerr << "on remove track -----------------------" << std::endl;
     auto track = receiver->track();
     json payload;
     payload["kind"] = track->kind();
@@ -175,6 +192,11 @@ void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface>
     } else if (track->kind() == track->kAudioKind) {
         writer->setAudioTrack(nullptr);
     }
+    //
+    totalTracks--;
+    //
+    if (totalTracks == 0)
+        writer.reset();
 }
 
 //

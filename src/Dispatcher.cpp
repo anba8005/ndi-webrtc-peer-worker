@@ -84,5 +84,10 @@ void Dispatcher::exec(string command, int64_t correlation, json payload) {
         //
         peer->createAnswer(correlation);
         //
+    } else if (command == COMMAND_CREATE_DATA_CHANNEL) {
+        //
+        const string name = payload.value("name", "");
+        peer->createDataChannel(name, correlation);
+        //
     }
 }

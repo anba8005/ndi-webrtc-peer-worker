@@ -1,0 +1,14 @@
+//
+// Created by anba8005 on 2/6/19.
+//
+
+#ifndef GYVAITV_WEBRTC_DATACHANNELOBSERVER_H
+#define GYVAITV_WEBRTC_DATACHANNELOBSERVER_H
+
+
+class DataChannelObserver {
+
+};
+
+
+#endif //GYVAITV_WEBRTC_DATACHANNELOBSERVER_H
