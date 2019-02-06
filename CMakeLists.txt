@@ -25,7 +25,7 @@ add_executable(
         src/BaseAudioDeviceModule.cpp src/BaseAudioDeviceModule.h
         src/AudioBuffer.cpp src/AudioBuffer.h
         src/VideoDeviceModule.cpp src/VideoDeviceModule.h
-        src/NDIReader.cpp src/NDIReader.h src/DataChannelObserver.cpp src/DataChannelObserver.h)
+        src/NDIReader.cpp src/NDIReader.h src/StatsCollectorCallback.cpp src/StatsCollectorCallback.h)
 
 target_link_libraries(gyvaitv_webrtc ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} avcodec avformat avutil swscale avdevice ndi pthread dl)
 target_include_directories(gyvaitv_webrtc PUBLIC ${WEBRTC_INCLUDE_DIR} /usr/local/share/webrtc/abseil-cpp/)

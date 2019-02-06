@@ -16,6 +16,7 @@
 #include "api/test/fakeconstraints.h"
 #include "NDIWriter.h"
 #include "NDIReader.h"
+#include "StatsCollectorCallback.h"
 
 using namespace std;
 
@@ -25,8 +26,10 @@ const string COMMAND_ADD_ICE_CANDIDATE = "addIceCandidate";
 const string COMMAND_CREATE_OFFER = "createOffer";
 const string COMMAND_CREATE_ANSWER = "createAnswer";
 const string COMMAND_CREATE_DATA_CHANNEL = "createDataChannel";
+const string COMMAND_GET_STATS = "getStats";
+const string COMMAND_SEND_DATA_MESSAGE = "sendDataMessage";
 
-class PeerContext : public webrtc::PeerConnectionObserver {
+class PeerContext : public webrtc::PeerConnectionObserver, public webrtc::DataChannelObserver {
 public:
     PeerContext(shared_ptr<Signaling> signaling);
 
@@ -53,6 +56,10 @@ public:
     void createOffer(int64_t correlation);
 
     void createDataChannel(const string &name, int64_t correlation);
+
+    void getStats(int64_t correlation);
+
+    void sendDataMessage(const string &data, int64_t correlation);
 
 protected:
 
@@ -81,6 +88,15 @@ protected:
 
     void OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) override;
 
+    // inherited from DataChannelObserver
+
+    void OnStateChange() override;
+
+    void OnMessage(const webrtc::DataBuffer &buffer) override;
+
+public:
+
+
 private:
 
     unique_ptr<webrtc::SessionDescriptionInterface> createSessionDescription(const string &type_str, const string &sdp);
@@ -89,9 +105,9 @@ private:
 
     unique_ptr<NDIReader> reader;
 
-    void addTracks();
-
     size_t totalTracks;
+
+    void addTracks();
 };
 
 

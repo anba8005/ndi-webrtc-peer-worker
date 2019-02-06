@@ -14,11 +14,12 @@ PeerContext::PeerContext(shared_ptr<Signaling> signaling) : signaling(signaling)
 
 PeerContext::~PeerContext() {
     // TODO
-    1. getstats - kad veiktu "connected"
-    2. ondatachannel + proper datachannel observer - kad veiktu "connected"
-    3. command line options (reader name,e.t.c)
-    4. reader & writer refactoring (dynamic dimesnions)
-    5. addtrack removetrack - dynamic reader streams ?
+//  +  1. getstats - kad veiktu "connected"
+//  + 2. ondatachannel + proper datachannel observer- kad veiktu "connected"
+//  + 3. send receive messages - kad veiktu statistikos siuntims
+//    3. command line options (reader name,e.t.c)
+//    4. reader & writer refactoring (dynamic dimesnions)
+//    5. addtrack removetrack - dynamic reader streams ?
 }
 
 void PeerContext::start() {
@@ -33,6 +34,10 @@ void PeerContext::start() {
 }
 
 void PeerContext::end() {
+    if (dc) {
+        dc->Close();
+        dc->UnregisterObserver();
+    }
     pc->Close();
 }
 
@@ -95,9 +100,46 @@ void PeerContext::addIceCandidate(const string &mid, int mlineindex, const strin
 }
 
 void PeerContext::createDataChannel(const string &name, int64_t correlation) {
-    webrtc::DataChannelInit config;
-    dc = pc->CreateDataChannel(name,&config);
-    signaling->replyOk(COMMAND_ADD_ICE_CANDIDATE, correlation);
+    if (dc) {
+        signaling->replyError(COMMAND_CREATE_DATA_CHANNEL, "Only one datachannel supported", correlation);
+    } else {
+        webrtc::DataChannelInit config;
+        dc = pc->CreateDataChannel(name, &config);
+        dc->RegisterObserver(this);
+        signaling->replyOk(COMMAND_CREATE_DATA_CHANNEL, correlation);
+    }
+}
+
+void PeerContext::sendDataMessage(const string &data, int64_t correlation) {
+    if (dc) {
+        std::cerr << "sending " + data << std::endl;
+        rtc::CopyOnWriteBuffer buffer(data);
+        webrtc::DataBuffer dataBuffer(buffer, false);
+        if (!dc->Send(dataBuffer)) {
+            switch (dc->state()) {
+                case webrtc::DataChannelInterface::kConnecting:
+                    signaling->replyError(COMMAND_SEND_DATA_MESSAGE, "Send error - Datachannel is connecting", correlation);
+                    break;
+                case webrtc::DataChannelInterface::kOpen:
+                    signaling->replyError(COMMAND_SEND_DATA_MESSAGE, "Send error", correlation);
+                    break;
+                case webrtc::DataChannelInterface::kClosing:
+                    signaling->replyError(COMMAND_SEND_DATA_MESSAGE, "Send error - Datachannel is closing", correlation);
+                    break;
+                case webrtc::DataChannelInterface::kClosed:
+                    signaling->replyError(COMMAND_SEND_DATA_MESSAGE, "Send error - Datachannel is closed", correlation);
+                    break;
+            }
+        } else {
+            signaling->replyOk(COMMAND_SEND_DATA_MESSAGE, correlation);
+        }
+    } else {
+        signaling->replyError(COMMAND_SEND_DATA_MESSAGE, "Datachannel is closed", correlation);
+    }
+}
+
+void PeerContext::getStats(int64_t correlation) {
+    pc->GetStats(StatsCollectorCallback::Create(signaling, correlation));
 }
 
 //
@@ -111,9 +153,14 @@ void PeerContext::OnSignalingChange(webrtc::PeerConnectionInterface::SignalingSt
 }
 
 void PeerContext::OnDataChannel(rtc::scoped_refptr<webrtc::DataChannelInterface> data_channel) {
-    json payload;
-    std::cerr << "ON DATA CHANNEL" << std::endl;
-    signaling->state("OnDataChannel", payload);
+    if (!dc) {
+        dc = data_channel;
+        json payload;
+        payload["name"] = data_channel->label();
+        std::cerr << "ON DATA CHANNEL" << std::endl;
+        dc->RegisterObserver(this);
+        signaling->state("OnDataChannel", payload);
+    }
 }
 
 void PeerContext::OnRenegotiationNeeded() {
@@ -167,12 +214,12 @@ void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> re
     signaling->state("OnAddTrack", payload);
     //
     if (!writer)
-        writer = make_unique<NDIWriter>("TEST",1280,720);
+        writer = make_unique<NDIWriter>("TEST", 1280, 720);
     //
     if (track->kind() == track->kVideoKind) {
-        writer->setVideoTrack(dynamic_cast<webrtc::VideoTrackInterface*>(track.release()));
+        writer->setVideoTrack(dynamic_cast<webrtc::VideoTrackInterface *>(track.release()));
     } else if (track->kind() == track->kAudioKind) {
-        writer->setAudioTrack(dynamic_cast<webrtc::AudioTrackInterface*>(track.release()));
+        writer->setAudioTrack(dynamic_cast<webrtc::AudioTrackInterface *>(track.release()));
     }
     //
     totalTracks++;
@@ -198,6 +245,24 @@ void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface>
     if (totalTracks == 0)
         writer.reset();
 }
+
+//
+
+
+void PeerContext::OnStateChange() {
+    json payload;
+    payload["state"] = dc->state();
+    signaling->state("OnDataChannelStateChange", payload);
+}
+
+void PeerContext::OnMessage(const webrtc::DataBuffer &buffer) {
+    if (buffer.size() > 0) {
+        json payload;
+        payload["data"] = std::string(buffer.data.data<char>(), buffer.data.size());
+        signaling->state("OnDataChannelMessage", payload);
+    }
+}
+
 
 //
 //
