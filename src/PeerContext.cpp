@@ -17,28 +17,46 @@ PeerContext::~PeerContext() {
 //  +  1. getstats - kad veiktu "connected"
 //  + 2. ondatachannel + proper datachannel observer- kad veiktu "connected"
 //  + 3. send receive messages - kad veiktu statistikos siuntims
-//    3. command line options (reader name,e.t.c)
+//   + 5. addtrack removetrack - dynamic reader streams ?
 //    4. reader & writer refactoring (dynamic dimesnions)
-//    5. addtrack removetrack - dynamic reader streams ?
+//  smth with offertoreceivevideo/audio
+//  peerfactorycontext configuration (stun servers, subnets, e.t.c)
 }
 
 void PeerContext::start() {
-    //
-    reader = make_unique<NDIReader>("ANBA8005-OLD (OBS2)");
-    reader->open();
-//    //
     context = make_shared<PeerFactoryContext>();
-    pc = context->createPeerConnection(this);
-    //
-    addTracks();
 }
 
 void PeerContext::end() {
-    if (dc) {
-        dc->Close();
-        dc->UnregisterObserver();
+    if (pc) {
+        if (dc) {
+            dc->Close();
+            dc->UnregisterObserver();
+            dc = nullptr;
+        }
+        pc->Close();
+        pc = nullptr;
     }
-    pc->Close();
+}
+
+void PeerContext::createPeer(json configuration, int64_t correlation) {
+    if (pc)
+        throw std::runtime_error("peer already created");
+    //
+    context->setConfiguration(configuration);
+    pc = context->createPeerConnection(this);
+    //
+    const json ndi = configuration["ndi"];
+    if (!ndi.empty()) {
+        writerConfig.enabled = ndi.value("outputEnabled", false);
+        writerConfig.name = ndi.value("outputName", "");
+    }
+    //
+    signaling->replyOk(COMMAND_CREATE_PEER, correlation);
+}
+
+bool PeerContext::hasPeer() {
+    return this->pc.get();
 }
 
 void PeerContext::processMessages() {
@@ -68,9 +86,15 @@ void PeerContext::setLocalDescription(const string &type_str, const string &sdp,
 
 void PeerContext::createAnswer(int64_t correlation) {
     webrtc::PeerConnectionInterface::RTCOfferAnswerOptions options;
-    options.offer_to_receive_video = webrtc::PeerConnectionInterface::RTCOfferAnswerOptions::kOfferToReceiveMediaTrue;
-    options.offer_to_receive_audio = webrtc::PeerConnectionInterface::RTCOfferAnswerOptions::kOfferToReceiveMediaTrue;
+//    if (writerConfig.enabled) {
+    options.offer_to_receive_video = 1;
+    options.offer_to_receive_audio = 1;
+//    } else {
+//        options.offer_to_receive_video = 0;
+//        options.offer_to_receive_audio = 0;
+//    }
     options.voice_activity_detection = false;
+
     //
     auto observer = CreateSessionDescriptionObserver::Create(signaling, COMMAND_CREATE_ANSWER, correlation);
     pc->CreateAnswer(observer, options);
@@ -78,8 +102,13 @@ void PeerContext::createAnswer(int64_t correlation) {
 
 void PeerContext::createOffer(int64_t correlation) {
     webrtc::PeerConnectionInterface::RTCOfferAnswerOptions options;
-    options.offer_to_receive_video = webrtc::PeerConnectionInterface::RTCOfferAnswerOptions::kOfferToReceiveMediaTrue;
-    options.offer_to_receive_audio = webrtc::PeerConnectionInterface::RTCOfferAnswerOptions::kOfferToReceiveMediaTrue;
+//    if (writerConfig.enabled) {
+    options.offer_to_receive_video = 1;
+    options.offer_to_receive_audio = 1;
+//    } else {
+//        options.offer_to_receive_video = 0;
+//        options.offer_to_receive_audio = 0;
+//    }
     options.voice_activity_detection = false;
     //
     auto observer = CreateSessionDescriptionObserver::Create(signaling, COMMAND_CREATE_OFFER, correlation);
@@ -112,19 +141,20 @@ void PeerContext::createDataChannel(const string &name, int64_t correlation) {
 
 void PeerContext::sendDataMessage(const string &data, int64_t correlation) {
     if (dc) {
-        std::cerr << "sending " + data << std::endl;
         rtc::CopyOnWriteBuffer buffer(data);
         webrtc::DataBuffer dataBuffer(buffer, false);
         if (!dc->Send(dataBuffer)) {
             switch (dc->state()) {
                 case webrtc::DataChannelInterface::kConnecting:
-                    signaling->replyError(COMMAND_SEND_DATA_MESSAGE, "Send error - Datachannel is connecting", correlation);
+                    signaling->replyError(COMMAND_SEND_DATA_MESSAGE, "Send error - Datachannel is connecting",
+                                          correlation);
                     break;
                 case webrtc::DataChannelInterface::kOpen:
                     signaling->replyError(COMMAND_SEND_DATA_MESSAGE, "Send error", correlation);
                     break;
                 case webrtc::DataChannelInterface::kClosing:
-                    signaling->replyError(COMMAND_SEND_DATA_MESSAGE, "Send error - Datachannel is closing", correlation);
+                    signaling->replyError(COMMAND_SEND_DATA_MESSAGE, "Send error - Datachannel is closing",
+                                          correlation);
                     break;
                 case webrtc::DataChannelInterface::kClosed:
                     signaling->replyError(COMMAND_SEND_DATA_MESSAGE, "Send error - Datachannel is closed", correlation);
@@ -141,6 +171,125 @@ void PeerContext::sendDataMessage(const string &data, int64_t correlation) {
 void PeerContext::getStats(int64_t correlation) {
     pc->GetStats(StatsCollectorCallback::Create(signaling, correlation));
 }
+
+void PeerContext::addTrack(json payload, int64_t correlation) {
+    // parse values
+    const string id = payload.value("id", "");
+    const bool audio = payload.value("audio", false);
+    const bool video = payload.value("video", false);
+
+    // validate
+    if (id.empty()) {
+        signaling->replyError(COMMAND_ADD_TRACK, "Stream id is empty", correlation);
+        return;
+    }
+    if (!audio && !video) {
+        signaling->replyError(COMMAND_ADD_TRACK, "Both audio & video disabled", correlation);
+        return;
+    }
+
+    // create reader
+    try {
+        reader = make_unique<NDIReader>();
+        NDIReader::Configuration configuration(payload);
+        reader->open(configuration);
+    } catch (const std::exception &e) {
+        signaling->replyError(COMMAND_ADD_TRACK, "Failed to create NDI reader: " + string(e.what()), correlation);
+        return;
+    }
+
+    // create audio options (TODO read from payload)
+    cricket::AudioOptions options;
+    options.auto_gain_control = false;
+    options.noise_suppression = false;
+    options.highpass_filter = false;
+    options.echo_cancellation = false;
+    options.typing_detection = false;
+    options.residual_echo_detector = false;
+    webrtc::VideoTrackInterface::ContentHint hint = webrtc::VideoTrackInterface::ContentHint::kFluid;
+
+    // add audio track
+    if (audio) {
+        auto audioTrack = context->createAudioTrack(options);
+        auto audioResult = pc->AddTrack(audioTrack, {id});
+        if (!audioResult.ok()) {
+            signaling->replyError(COMMAND_ADD_TRACK,
+                                  "Failed to add audio track to PeerConnection:" +
+                                  string(audioResult.error().message()),
+                                  correlation);
+            return;
+        }
+    }
+
+    // add video track
+    if (video) {
+        auto videoTrack = context->createVideoTrack();
+        videoTrack->set_content_hint(hint);
+        auto videoResult = pc->AddTrack(videoTrack, {id});
+        if (!videoResult.ok()) {
+            signaling->replyError(COMMAND_ADD_TRACK,
+                                  "Failed to add video track to PeerConnection:" +
+                                  string(videoResult.error().message()),
+                                  correlation);
+            return;
+        }
+    }
+
+    // try start reader (addtrack after removetrack case)
+    if (pc->ice_gathering_state() == webrtc::PeerConnectionInterface::IceGatheringState::kIceGatheringComplete) {
+        reader->start(context->getVDM(), context->getADM());
+    }
+
+    // return
+    signaling->replyOk(COMMAND_ADD_TRACK, correlation);
+}
+
+void PeerContext::removeTrack(string trackId, int64_t correlation) {
+    bool found = false;
+    for (auto const &sender: pc->GetSenders()) {
+        auto ids = sender->stream_ids();
+        if (ids.size() > 0 && ids[0] == trackId) {
+            found = true;
+            auto result = pc->RemoveTrackNew(sender);
+            if (!result.ok()) {
+                signaling->replyError(COMMAND_REMOVE_TRACK, "Error removing track: " + string(result.message()),
+                                      correlation);
+                return;
+            }
+        }
+    }
+    //
+    if (found && reader->isRunning()) {
+        reader->stop();
+        reader.reset();
+    }
+    //
+    signaling->replyOk(COMMAND_REMOVE_TRACK, correlation);
+}
+
+void PeerContext::replaceTrack(json payload, int64_t correlation) {
+    // parse values
+    const bool audio = payload.value("audio", false);
+    const bool video = payload.value("video", false);
+
+    // validate
+    if (!reader) {
+        signaling->replyError(COMMAND_REPLACE_TRACK, "No NDI reader", correlation);
+        return;
+    }
+    if (!audio && !video) {
+        signaling->replyError(COMMAND_ADD_TRACK, "Both audio & video disabled", correlation);
+        return;
+    }
+
+    // reopen reader
+    NDIReader::Configuration configuration(payload);
+    reader->open(configuration);
+
+    //
+    signaling->replyOk(COMMAND_REPLACE_TRACK, correlation);
+}
+
 
 //
 //
@@ -177,8 +326,9 @@ void PeerContext::OnIceGatheringChange(webrtc::PeerConnectionInterface::IceGathe
     payload["state"] = new_state;
     signaling->state("OnIceGatheringChange", payload);
     // start reader on connection
-    if (new_state == webrtc::PeerConnectionInterface::IceGatheringState::kIceGatheringComplete && reader)
+    if (new_state == webrtc::PeerConnectionInterface::IceGatheringState::kIceGatheringComplete && reader) {
         reader->start(context->getVDM(), context->getADM());
+    }
 }
 
 void PeerContext::OnIceCandidate(const webrtc::IceCandidateInterface *candidate) {
@@ -197,7 +347,6 @@ void PeerContext::OnIceCandidate(const webrtc::IceCandidateInterface *candidate)
 
 void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,
                              const vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>> &streams) {
-    std::cerr << "on add track -----------------------" << std::endl;
     auto track = receiver->track();
     json payload;
     payload["kind"] = track->kind();
@@ -213,13 +362,15 @@ void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> re
     //
     signaling->state("OnAddTrack", payload);
     //
-    if (!writer)
-        writer = make_unique<NDIWriter>("TEST", 1280, 720);
-    //
-    if (track->kind() == track->kVideoKind) {
-        writer->setVideoTrack(dynamic_cast<webrtc::VideoTrackInterface *>(track.release()));
-    } else if (track->kind() == track->kAudioKind) {
-        writer->setAudioTrack(dynamic_cast<webrtc::AudioTrackInterface *>(track.release()));
+    if (writerConfig.enabled) {
+        if (!writer)
+            writer = make_unique<NDIWriter>(writerConfig);
+        //
+        if (track->kind() == track->kVideoKind) {
+            writer->setVideoTrack(dynamic_cast<webrtc::VideoTrackInterface *>(track.release()));
+        } else if (track->kind() == track->kAudioKind) {
+            writer->setAudioTrack(dynamic_cast<webrtc::AudioTrackInterface *>(track.release()));
+        }
     }
     //
     totalTracks++;
@@ -234,10 +385,12 @@ void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface>
     //
     signaling->state("OnRemoveTrack", payload);
     //
-    if (track->kind() == track->kVideoKind) {
-        writer->setVideoTrack(nullptr);
-    } else if (track->kind() == track->kAudioKind) {
-        writer->setAudioTrack(nullptr);
+    if (writer) {
+        if (track->kind() == track->kVideoKind) {
+            writer->setVideoTrack(nullptr);
+        } else if (track->kind() == track->kAudioKind) {
+            writer->setAudioTrack(nullptr);
+        }
     }
     //
     totalTracks--;
@@ -283,32 +436,4 @@ PeerContext::createSessionDescription(const string &type_str, const string &sdp)
         throw runtime_error("Can't parse SDP: " + error.description);
     }
     return session_description;
-}
-
-void PeerContext::addTracks() {
-    // create audio options
-    cricket::AudioOptions options;
-    options.auto_gain_control = false;
-    options.noise_suppression = false;
-    options.highpass_filter = false;
-    options.echo_cancellation = false;
-    options.typing_detection = false;
-    options.residual_echo_detector = false;
-
-    // add audio track
-    auto audioTrack = context->createAudioTrack(options);
-    auto videoResult = pc->AddTrack(audioTrack, {"stream"});
-    if (!videoResult.ok()) {
-        throw std::runtime_error(
-                "Failed to add audio track to PeerConnection:" + string(videoResult.error().message()));
-    }
-
-    // add video track
-    auto videoTrack = context->createVideoTrack();
-    videoTrack->set_content_hint(webrtc::VideoTrackInterface::ContentHint::kFluid);
-    auto audioResult = pc->AddTrack(videoTrack, {"stream"});
-    if (!audioResult.ok()) {
-        throw std::runtime_error(
-                "Failed to add video track to PeerConnection:" + string(audioResult.error().message()));
-    }
 }

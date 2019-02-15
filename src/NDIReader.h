@@ -9,19 +9,33 @@
 #include <atomic>
 #include <string>
 
+#include "json.hpp"
+
 #include <Processing.NDI.Lib.h>
 #include "VideoDeviceModule.h"
 #include "BaseAudioDeviceModule.h"
 
+using json = nlohmann::json;
+
 class NDIReader {
 public:
-    NDIReader(std::string name, std::string ips = "");
+    class Configuration {
+    public:
+        std::string name;
+        std::string ips = "";
 
-    void open();
+        Configuration(json payload);
+    };
+
+    NDIReader();
+
+    void open(Configuration config);
 
     void start(VideoDeviceModule *vdm, BaseAudioDeviceModule *adm);
 
     void stop();
+
+    bool isRunning();
 
     virtual ~NDIReader();
 
@@ -31,8 +45,6 @@ private:
     std::thread runner;
     std::atomic<bool> running;
 
-    std::string name;
-    std::string ips;
     NDIlib_recv_instance_t _pNDI_recv;
 
     VideoDeviceModule *vdm;

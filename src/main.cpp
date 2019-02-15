@@ -9,6 +9,8 @@
 #include "rtc_base/logging.h"
 #include "rtc_base/ssladapter.h"
 
+#include <Processing.NDI.Lib.h>
+
 using namespace std;
 
 int main(int argc, char **argv) {
@@ -17,10 +19,7 @@ int main(int argc, char **argv) {
     rtc::LogMessage::LogThreads();
     rtc::InitializeSSL();
     //
-    args::ArgumentParser parser("This is a test program.");
-    args::Group group(parser, "Working mode:", args::Group::Validators::Xor);
-    args::Flag sending(group, "sending", "Sending mode", {"sending"});
-    args::Flag receiving(group, "receiving", "Receiving mode", {"receiving"});
+    args::ArgumentParser parser("NDI RTCPeerConnection worker");
     //
     try {
         parser.ParseCLI(argc, argv);
@@ -38,6 +37,12 @@ int main(int argc, char **argv) {
         std::cerr << e.what() << std::endl;
         std::cerr << parser;
         return EXIT_FAILURE;
+    }
+    //
+    //
+    //
+    if (!NDIlib_initialize()) {
+        throw "Cannot run NDI.";
     }
     //
     //

@@ -10,6 +10,8 @@
 #include <string>
 #include <memory>
 
+#include "json.hpp"
+
 #include "pc/peerconnectionfactory.h"
 #include "api/peerconnectioninterface.h"
 #include "PeerFactoryContext.h"
@@ -18,8 +20,12 @@
 #include "NDIReader.h"
 #include "StatsCollectorCallback.h"
 
+
+using json = nlohmann::json;
+
 using namespace std;
 
+const string COMMAND_CREATE_PEER = "createPeer";
 const string COMMAND_SET_LOCAL_DESCRIPTION = "setLocalDescription";
 const string COMMAND_SET_REMOTE_DESCRIPTION = "setRemoteDescription";
 const string COMMAND_ADD_ICE_CANDIDATE = "addIceCandidate";
@@ -28,6 +34,9 @@ const string COMMAND_CREATE_ANSWER = "createAnswer";
 const string COMMAND_CREATE_DATA_CHANNEL = "createDataChannel";
 const string COMMAND_GET_STATS = "getStats";
 const string COMMAND_SEND_DATA_MESSAGE = "sendDataMessage";
+const string COMMAND_ADD_TRACK = "addTrack";
+const string COMMAND_REMOVE_TRACK = "removeTrack";
+const string COMMAND_REPLACE_TRACK = "replaceTrack";
 
 class PeerContext : public webrtc::PeerConnectionObserver, public webrtc::DataChannelObserver {
 public:
@@ -40,6 +49,10 @@ public:
     void start();
 
     void end();
+
+    void createPeer(json configuration, int64_t correlation);
+
+    bool hasPeer();
 
     void processMessages();
 
@@ -60,6 +73,12 @@ public:
     void getStats(int64_t correlation);
 
     void sendDataMessage(const string &data, int64_t correlation);
+
+    void addTrack(json payload, int64_t correlation);
+
+    void removeTrack(string trackId, int64_t correlation);
+
+    void replaceTrack(json payload, int64_t correlation);
 
 protected:
 
@@ -103,11 +122,13 @@ private:
 
     unique_ptr<NDIWriter> writer;
 
+    NDIWriter::Configuration writerConfig;
+
     unique_ptr<NDIReader> reader;
 
-    size_t totalTracks;
+    NDIWriter::Configuration readerConfig;
 
-    void addTracks();
+    size_t totalTracks;
 };
 
 

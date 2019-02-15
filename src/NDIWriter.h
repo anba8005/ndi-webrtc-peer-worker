@@ -22,7 +22,14 @@ using namespace std;
 class NDIWriter : public rtc::VideoSinkInterface<webrtc::VideoFrame>,
                   public webrtc::AudioTrackSinkInterface {
 public:
-    NDIWriter(string name, int width, int height);
+    struct Configuration {
+        bool enabled = false;
+        std::string name;
+        int width = 1280;
+        int height = 720;
+    };
+
+    NDIWriter(Configuration config);
 
     ~NDIWriter();
 

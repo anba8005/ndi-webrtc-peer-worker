@@ -13,14 +13,15 @@
 #define NDI_TIME_BASE 10000000
 #define NDI_TIME_BASE_Q (AVRational){1, NDI_TIME_BASE}
 
-NDIWriter::NDIWriter(string name, int width, int height) : _scaling_context(nullptr) {
-    // Init
-    if (!NDIlib_initialize()) {
-        throw "Cannot run NDI.";
-    }
+NDIWriter::NDIWriter(Configuration config) : _scaling_context(nullptr) {
+    // validate
+    if (!config.enabled)
+        throw "Cannot run NDI - disabled";
+    if (config.name.empty())
+        throw "Cannot run NDI - name is empty";
 
     // Create an NDI source
-    _name = name;
+    _name = config.name;
     _NDI_send_create_desc.p_ndi_name = _name.c_str();
     _NDI_send_create_desc.clock_video = true;
     _NDI_send_create_desc.clock_audio = false;
@@ -34,6 +35,10 @@ NDIWriter::NDIWriter(string name, int width, int height) : _scaling_context(null
     // create pixel formats
     _src_pixel_format = av_get_pix_fmt("yuv420p");
     _ndi_pixel_format = av_get_pix_fmt("uyvy422");
+
+    // create dimensions
+    int width = config.width;
+    int height = config.height;
 
     // create video frame buffers
     _p_frame_buffers[0] = createVideoFrame(_ndi_pixel_format, width, height, true);
@@ -57,7 +62,6 @@ NDIWriter::~NDIWriter() {
 
     NDIlib_send_send_video_async_v2(_pNDI_send, nullptr);
     NDIlib_send_destroy(_pNDI_send);
-    NDIlib_destroy();
 
     if (_p_frame_buffers[0])
         av_free(_p_frame_buffers[0]);

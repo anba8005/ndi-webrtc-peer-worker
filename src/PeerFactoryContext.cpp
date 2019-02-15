@@ -70,6 +70,11 @@ PeerFactoryContext::PeerFactoryContext() {
     socketFactory.reset(new rtc::BasicPacketSocketFactory(networkThread.get()));
 }
 
+void
+PeerFactoryContext::setConfiguration(json configuration, bool merge) {
+    // TODO merge or set fresh
+}
+
 BaseAudioDeviceModule *PeerFactoryContext::getADM() {
     return adm;
 }

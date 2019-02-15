@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10.2)
-project(gyvaitv_webrtc)
+project(ndi-webrtc-peer-worker)
 
 set(WEBRTC_ROOT_DIR /usr/local/share/webrtc/webrtc-24472-4ab51cb-linux-x64)
 
@@ -13,7 +13,7 @@ include(CMakeFindExtensions)
 include(FindWebRTC)
 
 add_executable(
-        gyvaitv_webrtc
+	ndi-webrtc-peer-worker
         src/main.cpp
         src/PeerFactoryContext.cpp src/PeerFactoryContext.h
         src/SetSessionDescriptionObserver.cpp src/SetSessionDescriptionObserver.h
@@ -27,5 +27,5 @@ add_executable(
         src/VideoDeviceModule.cpp src/VideoDeviceModule.h
         src/NDIReader.cpp src/NDIReader.h src/StatsCollectorCallback.cpp src/StatsCollectorCallback.h)
 
-target_link_libraries(gyvaitv_webrtc ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} avcodec avformat avutil swscale avdevice ndi pthread dl)
-target_include_directories(gyvaitv_webrtc PUBLIC ${WEBRTC_INCLUDE_DIR} /usr/local/share/webrtc/abseil-cpp/)
+target_link_libraries(ndi-webrtc-peer-worker ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} avcodec avformat avutil swscale avdevice ndi pthread dl)
+target_include_directories(ndi-webrtc-peer-worker PUBLIC ${WEBRTC_INCLUDE_DIR} /usr/local/share/webrtc/abseil-cpp/)

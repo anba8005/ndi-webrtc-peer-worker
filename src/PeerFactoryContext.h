@@ -12,11 +12,18 @@
 #include "BaseAudioDeviceModule.h"
 #include "VideoDeviceModule.h"
 
+#include "json.hpp"
+
+using json = nlohmann::json;
+
 class PeerFactoryContext {
 public:
     PeerFactoryContext();
 
+    void setConfiguration(json configuration, bool merge = true);
+
     BaseAudioDeviceModule *getADM();
+
     VideoDeviceModule *getVDM();
 
     rtc::scoped_refptr<webrtc::PeerConnectionInterface>
