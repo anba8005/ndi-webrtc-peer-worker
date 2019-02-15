@@ -177,6 +177,7 @@ void PeerContext::addTrack(json payload, int64_t correlation) {
     const string id = payload.value("id", "");
     const bool audio = payload.value("audio", false);
     const bool video = payload.value("video", false);
+    const json audioOptions = payload["audioOptions"];
 
     // validate
     if (id.empty()) {
@@ -185,6 +186,10 @@ void PeerContext::addTrack(json payload, int64_t correlation) {
     }
     if (!audio && !video) {
         signaling->replyError(COMMAND_ADD_TRACK, "Both audio & video disabled", correlation);
+        return;
+    }
+    if (audioOptions == nullptr) {
+        signaling->replyError(COMMAND_ADD_TRACK, "No audio options", correlation);
         return;
     }
 
@@ -198,14 +203,16 @@ void PeerContext::addTrack(json payload, int64_t correlation) {
         return;
     }
 
-    // create audio options (TODO read from payload)
+    // create audio options
     cricket::AudioOptions options;
-    options.auto_gain_control = false;
-    options.noise_suppression = false;
-    options.highpass_filter = false;
-    options.echo_cancellation = false;
-    options.typing_detection = false;
-    options.residual_echo_detector = false;
+    options.auto_gain_control = audioOptions.value("autoGainControl",false);
+    options.noise_suppression = audioOptions.value("noiseSuppression",false);
+    options.highpass_filter = audioOptions.value("highPassFilter",false);
+    options.echo_cancellation = audioOptions.value("echoCancelation",false);
+    options.typing_detection = audioOptions.value("typingDetection",false);
+    options.residual_echo_detector = audioOptions.value("residualEchoDetector",false);
+
+    // create content hint (TODO opitions)
     webrtc::VideoTrackInterface::ContentHint hint = webrtc::VideoTrackInterface::ContentHint::kFluid;
 
     // add audio track
