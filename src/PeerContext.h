@@ -64,9 +64,9 @@ public:
 
     void addIceCandidate(const string &mid, int mlineindex, const string &sdp, int64_t correlation);
 
-    void createAnswer(int64_t correlation);
+    void createAnswer(json payload, int64_t correlation);
 
-    void createOffer(int64_t correlation);
+    void createOffer(json payload, int64_t correlation);
 
     void createDataChannel(const string &name, int64_t correlation);
 
@@ -122,11 +122,9 @@ private:
 
     unique_ptr<NDIWriter> writer;
 
-    NDIWriter::Configuration writerConfig;
+    unique_ptr<NDIWriter::Configuration> writerConfig;
 
     unique_ptr<NDIReader> reader;
-
-    NDIWriter::Configuration readerConfig;
 
     size_t totalTracks;
 };

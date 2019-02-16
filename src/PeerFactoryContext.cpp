@@ -17,6 +17,7 @@
 #include "system_wrappers/include/field_trial_default.h"
 
 #include <memory>
+#include <iostream>
 
 PeerFactoryContext::PeerFactoryContext() {
     //
@@ -48,22 +49,9 @@ PeerFactoryContext::PeerFactoryContext() {
             adm, webrtc::CreateBuiltinAudioEncoderFactory(), webrtc::CreateBuiltinAudioDecoderFactory(),
             webrtc::CreateBuiltinVideoEncoderFactory(), webrtc::CreateBuiltinVideoDecoderFactory(), nullptr, nullptr);
 
+    // validate
     if (!factory)
         throw std::runtime_error("Failed to create WebRTC factory");
-
-    // Update configuration
-    webrtc::PeerConnectionInterface::IceServer stun;
-    stun.uri = "stun:stun.l.google.com:19302";
-    this->config.servers.push_back(stun);
-    webrtc::PeerConnectionInterface::IceServer turn;
-    turn.urls.push_back("turn:vpn.b3video.lt:3478?transport=udp");
-    turn.username = "turn";
-    turn.password = "turn";
-    this->config.servers.push_back(turn);
-
-    //
-    config.set_cpu_adaptation(true);
-
 
     //
     networkManager.reset(new rtc::BasicNetworkManager());
@@ -71,8 +59,32 @@ PeerFactoryContext::PeerFactoryContext() {
 }
 
 void
-PeerFactoryContext::setConfiguration(json configuration, bool merge) {
-    // TODO merge or set fresh
+PeerFactoryContext::setConfiguration(json configuration) {
+    //
+    json iceServers = configuration["iceServers"];
+    if (iceServers != nullptr && iceServers.is_array()) {
+        for (auto& iceServer : iceServers) {
+            webrtc::PeerConnectionInterface::IceServer srv;
+            //
+            json urls = iceServer["urls"];
+            if (urls.is_array()) {
+                for (auto& url : urls) {
+                    srv.urls.push_back(url.get<std::string>());
+                }
+            } else if (urls.is_string()){
+                srv.urls.push_back(urls.get<std::string>());
+            } else {
+                std::cerr << "invalid iceServer urls" << urls;
+            }
+            //
+            srv.username = iceServer.value("username","");
+            srv.password = iceServer.value("credential","");
+            //
+            config.servers.push_back(srv);
+        }
+    }
+    //
+    config.set_cpu_adaptation(configuration.value("cpuAdaptation",true));
 }
 
 BaseAudioDeviceModule *PeerFactoryContext::getADM() {

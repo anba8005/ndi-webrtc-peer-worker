@@ -20,7 +20,7 @@ class PeerFactoryContext {
 public:
     PeerFactoryContext();
 
-    void setConfiguration(json configuration, bool merge = true);
+    void setConfiguration(json configuration);
 
     BaseAudioDeviceModule *getADM();
 
@@ -47,9 +47,8 @@ private:
     std::unique_ptr<rtc::Thread> networkThread;
     std::unique_ptr<rtc::Thread> workerThread;
     //
-    std::unique_ptr<rtc::NetworkManager> networkManager;
+    std::unique_ptr<rtc::BasicNetworkManager> networkManager;
     std::unique_ptr<rtc::PacketSocketFactory> socketFactory;
-    std::unique_ptr<cricket::PortAllocator> portAllocator;
 };
 
 

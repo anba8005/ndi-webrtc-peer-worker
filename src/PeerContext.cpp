@@ -18,9 +18,9 @@ PeerContext::~PeerContext() {
 //  + 2. ondatachannel + proper datachannel observer- kad veiktu "connected"
 //  + 3. send receive messages - kad veiktu statistikos siuntims
 //   + 5. addtrack removetrack - dynamic reader streams ?
-//    4. reader & writer refactoring (dynamic dimesnions)
-//  smth with offertoreceivevideo/audio
-//  peerfactorycontext configuration (stun servers, subnets, e.t.c)
+//   + 4. writer refactoring (dynamic dimesnions)
+//  + smth with offertoreceivevideo/audio
+//  + peerfactorycontext configuration (stun servers)
 }
 
 void PeerContext::start() {
@@ -48,8 +48,7 @@ void PeerContext::createPeer(json configuration, int64_t correlation) {
     //
     const json ndi = configuration["ndi"];
     if (!ndi.empty()) {
-        writerConfig.enabled = ndi.value("outputEnabled", false);
-        writerConfig.name = ndi.value("outputName", "");
+        writerConfig.reset(new NDIWriter::Configuration(ndi));
     }
     //
     signaling->replyOk(COMMAND_CREATE_PEER, correlation);
@@ -84,32 +83,21 @@ void PeerContext::setLocalDescription(const string &type_str, const string &sdp,
     }
 }
 
-void PeerContext::createAnswer(int64_t correlation) {
+void PeerContext::createAnswer(json payload, int64_t correlation) {
     webrtc::PeerConnectionInterface::RTCOfferAnswerOptions options;
-//    if (writerConfig.enabled) {
-    options.offer_to_receive_video = 1;
-    options.offer_to_receive_audio = 1;
-//    } else {
-//        options.offer_to_receive_video = 0;
-//        options.offer_to_receive_audio = 0;
-//    }
-    options.voice_activity_detection = false;
-
+    options.offer_to_receive_video = payload.value("offerToReceiveVideo",true);
+    options.offer_to_receive_audio = payload.value("offerToReceiveAudio",true);
+    options.voice_activity_detection = payload.value("voiceActivityDetection",true);
     //
     auto observer = CreateSessionDescriptionObserver::Create(signaling, COMMAND_CREATE_ANSWER, correlation);
     pc->CreateAnswer(observer, options);
 }
 
-void PeerContext::createOffer(int64_t correlation) {
+void PeerContext::createOffer(json payload, int64_t correlation) {
     webrtc::PeerConnectionInterface::RTCOfferAnswerOptions options;
-//    if (writerConfig.enabled) {
-    options.offer_to_receive_video = 1;
-    options.offer_to_receive_audio = 1;
-//    } else {
-//        options.offer_to_receive_video = 0;
-//        options.offer_to_receive_audio = 0;
-//    }
-    options.voice_activity_detection = false;
+    options.offer_to_receive_video = payload.value("offerToReceiveVideo",true);
+    options.offer_to_receive_audio = payload.value("offerToReceiveAudio",true);
+    options.voice_activity_detection = payload.value("voiceActivityDetection",true);
     //
     auto observer = CreateSessionDescriptionObserver::Create(signaling, COMMAND_CREATE_OFFER, correlation);
     pc->CreateOffer(observer, options);
@@ -205,12 +193,12 @@ void PeerContext::addTrack(json payload, int64_t correlation) {
 
     // create audio options
     cricket::AudioOptions options;
-    options.auto_gain_control = audioOptions.value("autoGainControl",false);
-    options.noise_suppression = audioOptions.value("noiseSuppression",false);
-    options.highpass_filter = audioOptions.value("highPassFilter",false);
-    options.echo_cancellation = audioOptions.value("echoCancelation",false);
-    options.typing_detection = audioOptions.value("typingDetection",false);
-    options.residual_echo_detector = audioOptions.value("residualEchoDetector",false);
+    options.auto_gain_control = audioOptions.value("autoGainControl", false);
+    options.noise_suppression = audioOptions.value("noiseSuppression", false);
+    options.highpass_filter = audioOptions.value("highPassFilter", false);
+    options.echo_cancellation = audioOptions.value("echoCancelation", false);
+    options.typing_detection = audioOptions.value("typingDetection", false);
+    options.residual_echo_detector = audioOptions.value("residualEchoDetector", false);
 
     // create content hint (TODO opitions)
     webrtc::VideoTrackInterface::ContentHint hint = webrtc::VideoTrackInterface::ContentHint::kFluid;
@@ -313,7 +301,6 @@ void PeerContext::OnDataChannel(rtc::scoped_refptr<webrtc::DataChannelInterface>
         dc = data_channel;
         json payload;
         payload["name"] = data_channel->label();
-        std::cerr << "ON DATA CHANNEL" << std::endl;
         dc->RegisterObserver(this);
         signaling->state("OnDataChannel", payload);
     }
@@ -369,9 +356,13 @@ void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> re
     //
     signaling->state("OnAddTrack", payload);
     //
-    if (writerConfig.enabled) {
-        if (!writer)
-            writer = make_unique<NDIWriter>(writerConfig);
+    if (writerConfig && writerConfig->isEnabled()) {
+        //
+        if (!writer) {
+            writer = make_unique<NDIWriter>();
+            writer->open(*(writerConfig.get()));
+        }
+
         //
         if (track->kind() == track->kVideoKind) {
             writer->setVideoTrack(dynamic_cast<webrtc::VideoTrackInterface *>(track.release()));
@@ -402,7 +393,7 @@ void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface>
     //
     totalTracks--;
     //
-    if (totalTracks == 0)
+    if (totalTracks == 0 && !writerConfig->persistent)
         writer.reset();
 }
 

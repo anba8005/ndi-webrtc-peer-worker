@@ -8,6 +8,8 @@
 #include <string>
 #include "api/peerconnectioninterface.h"
 
+#include "json.hpp"
+
 #include <Processing.NDI.Lib.h>
 
 extern "C" {
@@ -17,21 +19,30 @@ extern "C" {
 #include <libavutil/imgutils.h>
 }
 
-using namespace std;
+using json = nlohmann::json;
 
 class NDIWriter : public rtc::VideoSinkInterface<webrtc::VideoFrame>,
                   public webrtc::AudioTrackSinkInterface {
 public:
-    struct Configuration {
-        bool enabled = false;
+    class Configuration {
+    public:
         std::string name;
-        int width = 1280;
-        int height = 720;
+        int width = 0;
+        int height = 0;
+        int frameRate = 0;
+        bool persistent = true;
+
+        bool isEnabled();
+
+        Configuration(json payload);
     };
 
-    NDIWriter(Configuration config);
+
+    NDIWriter();
 
     ~NDIWriter();
+
+    void open(Configuration config);
 
     void setVideoTrack(webrtc::VideoTrackInterface *track);
 
@@ -45,7 +56,9 @@ public:
                 size_t number_of_channels, size_t number_of_frames) override;
 
 private:
-    string _name;
+    std::string _name;
+    int _width;
+    int _height;
     //
     rtc::scoped_refptr<webrtc::VideoTrackInterface> _videoTrack;
     rtc::scoped_refptr<webrtc::AudioTrackInterface> _audioTrack;
@@ -57,8 +70,6 @@ private:
     AVFrame *_p_frame_buffers[2];
     long long _p_frame_buffer_idx;
     SwsContext *_scaling_context;
-    AVPixelFormat _src_pixel_format;
-    AVPixelFormat _ndi_pixel_format;
 
     //
     //

@@ -97,11 +97,11 @@ void Dispatcher::exec(string command, int64_t correlation, json payload) {
             //
         } else if (command == COMMAND_CREATE_OFFER) {
             //
-            peer->createOffer(correlation);
+            peer->createOffer(payload, correlation);
             //
         } else if (command == COMMAND_CREATE_ANSWER) {
             //
-            peer->createAnswer(correlation);
+            peer->createAnswer(payload, correlation);
             //
         } else if (command == COMMAND_CREATE_DATA_CHANNEL) {
             //
