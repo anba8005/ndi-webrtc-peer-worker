@@ -5,6 +5,12 @@
 #ifndef GYVAITV_WEBRTC_NDIWRITER_H
 #define GYVAITV_WEBRTC_NDIWRITER_H
 
+#ifdef WIN32
+#define NOMINMAX
+#undef min
+#undef max
+#endif
+
 #include <string>
 #include "api/peerconnectioninterface.h"
 

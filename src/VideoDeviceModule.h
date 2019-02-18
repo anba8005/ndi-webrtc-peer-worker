@@ -5,6 +5,12 @@
 #ifndef GYVAITV_WEBRTC_VIDEODEVICEMODULE_H
 #define GYVAITV_WEBRTC_VIDEODEVICEMODULE_H
 
+#ifdef WIN32
+#define NOMINMAX
+#undef min
+#undef max
+#endif
+
 #include "media/base/adaptedvideotracksource.h"
 #include "api/video/i420_buffer.h"
 

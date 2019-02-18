@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10.2)
 project(ndi-webrtc-peer-worker)
 
-set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-24472-4ab51cb-linux-x64)
+set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-24472-4ab51cb-win-x64)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -12,9 +12,37 @@ include(CMakeHelpers)
 include(CMakeFindExtensions)
 include(FindWebRTC)
 
-set(FFMPEG_LIBS avcodec avformat avutil swscale avdevice)
+# FFMPEG
+IF (WIN32)
+	set(FFMPEG_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/avcodec.lib ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/avformat.lib
+			${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/avutil.lib ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/swscale.lib
+			${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/avdevice.lib)
+ELSE()
+	set(FFMPEG_LIBS avcodec avformat avutil swscale avdevice)
+ENDIF()
 set(FFMPEG_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/include)
-set(FFMPEG_LIB_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/)
+
+# NDI
+IF (WIN32)
+	set(NDI_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/lib/x64/Processing.NDI.Lib.x64.lib)
+ELSE()
+	set(NDI_LIBS ndi)
+ENDIF()
+set(NDI_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/include)
+
+# SYSTEM
+IF (WIN32)
+	#set(NDI_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/lib/x64/Processing.NDI.Lib.x64.lib)
+ELSE()
+	set(SYSTEM_LIBS pthread dl)
+ENDIF()
+
+# Compile options
+IF (WIN32)
+	set(COMPILE_OPTIONS "/MT$<$<CONFIG:Debug>:d>")
+ELSE()
+	#
+ENDIF()
 
 add_executable(
 		ndi-webrtc-peer-worker
@@ -31,7 +59,7 @@ add_executable(
 		src/VideoDeviceModule.cpp src/VideoDeviceModule.h
 		src/NDIReader.cpp src/NDIReader.h src/StatsCollectorCallback.cpp src/StatsCollectorCallback.h)
 
-target_link_directories(ndi-webrtc-peer-worker PUBLIC ${FFMPEG_LIB_DIR})
-target_link_libraries(ndi-webrtc-peer-worker ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} ${FFMPEG_LIBS} ndi pthread dl)
-target_include_directories(ndi-webrtc-peer-worker PUBLIC
+target_compile_options(ndi-webrtc-peer-worker PUBLIC ${COMPILE_OPTIONS})
+target_link_libraries(ndi-webrtc-peer-worker PUBLIC ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} ${FFMPEG_LIBS} ${NDI_LIBS} ${SYSTEM_LIBS})
+target_include_directories(ndi-webrtc-peer-worker PUBLIC ${NDI_INCLUDE_DIR}
 		${FFMPEG_INCLUDE_DIR} ${WEBRTC_INCLUDE_DIR} ${CMAKE_CURRENT_LIST_DIR}/vendor/abseil-cpp)
