@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.10.2)
 project(ndi-webrtc-peer-worker)
 
-set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-24472-4ab51cb-win-x64)
+# WEBRTC
+IF (WIN32)
+	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-24472-4ab51cb-win-x64)
+ELSE()
+	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-24472-4ab51cb-linux-x64)
+ENDIF()
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_VERBOSE_MAKEFILE ON)
