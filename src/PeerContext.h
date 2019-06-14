@@ -38,6 +38,8 @@ const string COMMAND_CREATE_OFFER = "createOffer";
 const string COMMAND_CREATE_ANSWER = "createAnswer";
 const string COMMAND_CREATE_DATA_CHANNEL = "createDataChannel";
 const string COMMAND_GET_STATS = "getStats";
+const string COMMAND_GET_SENDERS = "getSenders";
+const string COMMAND_GET_RECEIVERS = "getReceivers";
 const string COMMAND_SEND_DATA_MESSAGE = "sendDataMessage";
 const string COMMAND_ADD_TRACK = "addTrack";
 const string COMMAND_REMOVE_TRACK = "removeTrack";
@@ -76,6 +78,10 @@ public:
     void createDataChannel(const string &name, int64_t correlation);
 
     void getStats(int64_t correlation);
+
+	void getSenders(int64_t correlation);
+
+	void getReceivers(int64_t correlation);
 
     void sendDataMessage(const string &data, int64_t correlation);
 

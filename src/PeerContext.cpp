@@ -160,6 +160,34 @@ void PeerContext::getStats(int64_t correlation) {
     pc->GetStats(StatsCollectorCallback::Create(signaling, correlation));
 }
 
+void PeerContext::getSenders(int64_t correlation) {
+	const std::vector<rtc::scoped_refptr<webrtc::RtpSenderInterface>> senders = pc->GetSenders();
+	//
+	json payload = json::array();
+	for (const auto &sender : senders) {
+		json s;
+		s["track"]["id"] = sender->track()->id();
+		s["track"]["kind"] = sender->track()->kind();
+		payload.push_back(s);
+	}
+	//
+	signaling->replyWithPayload(COMMAND_GET_SENDERS,payload, correlation);
+}
+
+void PeerContext::getReceivers(int64_t correlation) {
+	const std::vector<rtc::scoped_refptr<webrtc::RtpReceiverInterface>> receivers = pc->GetReceivers();
+	//
+	json payload = json::array();
+	for (const auto &receiver : receivers) {
+		json r;
+		r["track"]["id"] = receiver->track()->id();
+		r["track"]["kind"] = receiver->track()->kind();
+		payload.push_back(r);
+	}
+	//
+	signaling->replyWithPayload(COMMAND_GET_RECEIVERS,payload, correlation);
+}
+
 void PeerContext::addTrack(json payload, int64_t correlation) {
     // parse values
     const string id = payload.value("id", "");

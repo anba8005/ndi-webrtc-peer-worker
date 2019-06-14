@@ -112,7 +112,15 @@ void Dispatcher::exec(string command, int64_t correlation, json payload) {
             //
             peer->getStats(correlation);
             //
-        } else if (command == COMMAND_SEND_DATA_MESSAGE) {
+        } else if (command == COMMAND_GET_SENDERS) {
+			//
+			peer->getSenders(correlation);
+			//
+		} else if (command == COMMAND_GET_RECEIVERS) {
+			//
+			peer->getReceivers(correlation);
+			//
+		} else if (command == COMMAND_SEND_DATA_MESSAGE) {
             //
             const string data = payload.value("data", "");
             peer->sendDataMessage(data, correlation);
