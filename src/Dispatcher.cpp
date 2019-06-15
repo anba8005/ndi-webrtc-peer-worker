@@ -112,7 +112,11 @@ void Dispatcher::exec(string command, int64_t correlation, json payload) {
             //
             peer->getStats(correlation);
             //
-        } else if (command == COMMAND_GET_SENDERS) {
+        } else if (command == COMMAND_GET_STATS_OLD) {
+			//
+			peer->getStatsOld(correlation);
+			//
+		} else if (command == COMMAND_GET_SENDERS) {
 			//
 			peer->getSenders(correlation);
 			//

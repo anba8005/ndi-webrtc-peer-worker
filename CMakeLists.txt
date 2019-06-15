@@ -62,7 +62,7 @@ add_executable(
 		src/BaseAudioDeviceModule.cpp src/BaseAudioDeviceModule.h
 		src/AudioBuffer.cpp src/AudioBuffer.h
 		src/VideoDeviceModule.cpp src/VideoDeviceModule.h
-		src/NDIReader.cpp src/NDIReader.h src/StatsCollectorCallback.cpp src/StatsCollectorCallback.h)
+		src/NDIReader.cpp src/NDIReader.h src/StatsCollectorCallback.cpp src/StatsCollectorCallback.h src/StatsObserver.cpp src/StatsObserver.h)
 
 target_compile_options(ndi-webrtc-peer-worker PUBLIC ${COMPILE_OPTIONS})
 target_link_libraries(ndi-webrtc-peer-worker PUBLIC ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} ${FFMPEG_LIBS} ${NDI_LIBS} ${SYSTEM_LIBS})
