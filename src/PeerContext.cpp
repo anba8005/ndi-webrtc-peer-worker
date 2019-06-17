@@ -427,7 +427,7 @@ void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface>
 	//
 	totalTracks--;
 	//
-	if (totalTracks == 0 && !writerConfig->persistent)
+	if (totalTracks == 0 && writerConfig && !writerConfig->persistent)
 		writer.reset();
 }
 
