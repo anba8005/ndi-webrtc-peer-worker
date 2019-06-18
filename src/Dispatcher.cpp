@@ -65,7 +65,11 @@ void Dispatcher::exec(string command, int64_t correlation, json payload) {
             //
             peer->createPeer(payload, correlation);
             //
-        } else {
+        } else if (command == COMMAND_FIND_NDI_SOURCES) {
+			//
+			peer->findNDISources(correlation);
+			//
+		} else {
             //
             throw std::runtime_error(command + " error - peer is not created");
             //

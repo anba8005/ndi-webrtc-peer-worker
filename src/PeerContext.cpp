@@ -319,6 +319,11 @@ void PeerContext::replaceTrack(json payload, int64_t correlation) {
 	signaling->replyOk(COMMAND_REPLACE_TRACK, correlation);
 }
 
+void PeerContext::findNDISources(int64_t correlation) {
+	json payload = NDIReader::findSources();
+	signaling->replyWithPayload(COMMAND_FIND_NDI_SOURCES,payload,correlation);
+}
+
 
 //
 //

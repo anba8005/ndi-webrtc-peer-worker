@@ -45,6 +45,7 @@ const string COMMAND_SEND_DATA_MESSAGE = "sendDataMessage";
 const string COMMAND_ADD_TRACK = "addTrack";
 const string COMMAND_REMOVE_TRACK = "removeTrack";
 const string COMMAND_REPLACE_TRACK = "replaceTrack";
+const string COMMAND_FIND_NDI_SOURCES = "findNDISources";
 
 class PeerContext : public webrtc::PeerConnectionObserver, public webrtc::DataChannelObserver {
 public:
@@ -93,6 +94,8 @@ public:
     void removeTrack(string trackId, int64_t correlation);
 
     void replaceTrack(json payload, int64_t correlation);
+
+    void findNDISources(int64_t correlation);
 
 protected:
 

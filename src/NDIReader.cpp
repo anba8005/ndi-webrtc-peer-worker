@@ -166,9 +166,51 @@ void NDIReader::run() {
     }
 }
 
+json NDIReader::findSources() {
+	// Create the descriptor of the object to create
+	NDIlib_find_create_t find_create;
+	find_create.show_local_sources = true;
+	find_create.p_groups = nullptr;
+	find_create.p_extra_ips = nullptr;
+
+	// Create a finder
+	NDIlib_find_instance_t pNDI_find = NDIlib_find_create_v2(&find_create);
+	if (!pNDI_find)
+		throw std::runtime_error("Cannot create NDI finder");
+
+	// Wait until there is one source
+	uint32_t no_sources = 0;
+	const NDIlib_source_t *p_sources = nullptr;
+	std::cerr << "Looking for sources ..." << std::endl;
+	while (true) {
+		if (NDIlib_find_wait_for_sources(pNDI_find, 200)) {
+			p_sources = NDIlib_find_get_current_sources(pNDI_find, &no_sources);
+		} else {
+			break;
+		}
+	}
+	std::cerr << "Network sources (" << no_sources << " found)" << std::endl;
+
+	// create result
+	json result = json::array();
+	for (uint32_t i = 0; i < no_sources; i++) {
+		//std::cerr << i + 1 << " " << p_sources[i].p_ndi_name << " " << p_sources[i].p_ip_address << std::endl;
+		json source;
+		source["name"] = p_sources[i].p_ndi_name;
+		source["ip"] = p_sources[i].p_ip_address;
+		result.push_back(source);
+	}
+
+	// cleanup
+	NDIlib_find_destroy(pNDI_find);
+
+	return result;
+}
+
 NDIReader::Configuration::Configuration(json payload) {
     this->name = payload.value("name", "");
     if (name.empty())
         throw std::runtime_error("NDI Source name is empty");
     this->ips = payload.value("ips", "");
 }
+

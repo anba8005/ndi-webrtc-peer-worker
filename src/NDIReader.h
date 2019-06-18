@@ -39,6 +39,8 @@ public:
 
     virtual ~NDIReader();
 
+    static json findSources();
+
 private:
     void run();
 
