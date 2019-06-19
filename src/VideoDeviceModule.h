@@ -39,7 +39,8 @@ public:
     SourceState state() const override;
     bool remote() const override;
 
-    void feedFrame(int width, int height, const uint8_t *data,const int linesize, int64_t timestamp);
+    void feedFrame(int width, int height, const uint8_t *data,const int linesize, int64_t timestamp,
+    		int maxWidth, int maxHeight);
 
 protected:
 

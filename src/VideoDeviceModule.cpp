@@ -20,7 +20,8 @@ VideoDeviceModule::~VideoDeviceModule() {
 }
 
 void
-VideoDeviceModule::feedFrame(int width, int height, const uint8_t *data, const int linesize, const int64_t timestamp) {
+VideoDeviceModule::feedFrame(int width, int height, const uint8_t *data, const int linesize, const int64_t timestamp,
+		int maxWidth, int maxHeight) {
     // adapt frame
     int out_width = 0;
     int out_height = 0;
@@ -28,8 +29,10 @@ VideoDeviceModule::feedFrame(int width, int height, const uint8_t *data, const i
     int crop_height = 0;
     int crop_x = 0;
     int crop_y = 0;
+    int target_width = maxWidth != 0 ? maxWidth : width;
+    int target_height = maxHeight != 0 ? maxHeight : height;
     int64_t time_us = timestamp / ((int64_t) 10);
-    bool result = AdaptFrame(width, height, time_us, &out_width, &out_height, &crop_width, &crop_height, &crop_x,
+    bool result = AdaptFrame(target_width, target_height, time_us, &out_width, &out_height, &crop_width, &crop_height, &crop_x,
                              &crop_y);
     if (!result) {
         std::cerr << "skip frame" << std::endl;

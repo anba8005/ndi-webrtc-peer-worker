@@ -23,6 +23,8 @@ public:
     public:
         std::string name;
         std::string ips = "";
+        int maxWidth;
+        int maxHeight;
 
         Configuration(json payload);
     };
@@ -51,6 +53,9 @@ private:
 
     VideoDeviceModule *vdm;
     BaseAudioDeviceModule *adm;
+
+    int maxWidth;
+    int maxHeight;
 };
 
 

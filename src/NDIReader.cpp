@@ -19,6 +19,9 @@ NDIReader::~NDIReader() {
 }
 
 void NDIReader::open(Configuration config) {
+	//
+	this->maxWidth = config.maxWidth;
+	this->maxHeight = config.maxHeight;
 
     // Create the descriptor of the object to create
     NDIlib_find_create_t find_create;
@@ -122,7 +125,7 @@ void NDIReader::run() {
                 // send
                 if (vdm)
                     vdm->feedFrame(video_frame.xres, video_frame.yres, video_frame.p_data,
-                                   video_frame.line_stride_in_bytes, video_frame.timestamp);
+                                   video_frame.line_stride_in_bytes, video_frame.timestamp, maxWidth, maxHeight);
                 // free
                 NDIlib_recv_free_video_v2(_pNDI_recv, &video_frame);
                 break;
@@ -212,5 +215,9 @@ NDIReader::Configuration::Configuration(json payload) {
     if (name.empty())
         throw std::runtime_error("NDI Source name is empty");
     this->ips = payload.value("ips", "");
+    this->maxWidth = payload.value("width",0);
+    this->maxHeight = payload.value("height",0);
+
+
 }
 
