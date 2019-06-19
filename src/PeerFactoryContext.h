@@ -25,6 +25,8 @@ class PeerFactoryContext {
 public:
     PeerFactoryContext();
 
+	virtual ~PeerFactoryContext();
+
     void setConfiguration(json configuration);
 
     BaseAudioDeviceModule *getADM();

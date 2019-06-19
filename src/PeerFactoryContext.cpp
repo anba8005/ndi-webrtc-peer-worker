@@ -58,6 +58,10 @@ PeerFactoryContext::PeerFactoryContext() {
     socketFactory.reset(new rtc::BasicPacketSocketFactory(networkThread.get()));
 }
 
+PeerFactoryContext::~PeerFactoryContext() {
+	factory.release();
+}
+
 void
 PeerFactoryContext::setConfiguration(json configuration) {
     //
