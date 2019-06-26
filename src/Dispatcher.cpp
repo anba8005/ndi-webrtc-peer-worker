@@ -11,7 +11,7 @@
 using json = nlohmann::json;
 
 Dispatcher::Dispatcher(shared_ptr<Signaling> signaling, shared_ptr<PeerContext> peer) : signaling(signaling),
-                                                                                        peer(peer) {
+                                                                                        peer(peer), finished(false) {
 
 }
 

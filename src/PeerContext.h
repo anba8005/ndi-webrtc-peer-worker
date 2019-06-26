@@ -24,6 +24,7 @@
 #include "NDIWriter.h"
 #include "NDIReader.h"
 #include "StatsCollectorCallback.h"
+#include "StatsObserver.h"
 
 
 using json = nlohmann::json;

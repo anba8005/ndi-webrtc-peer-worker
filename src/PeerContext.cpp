@@ -5,7 +5,6 @@
 #include "PeerContext.h"
 #include "SetSessionDescriptionObserver.h"
 #include "CreateSessionDescriptionObserver.h"
-#include "StatsObserver.h"
 
 #include <iostream>
 
@@ -25,10 +24,12 @@ PeerContext::~PeerContext() {
 }
 
 void PeerContext::start() {
+    cerr << "Starting PeerContext" << endl;
 	context = make_shared<PeerFactoryContext>();
 }
 
 void PeerContext::end() {
+    cerr << "Stopping PeerContext" << endl;
 	if (pc) {
 		if (dc) {
 			dc->Close();

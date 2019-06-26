@@ -4,7 +4,6 @@
 
 #include "StatsObserver.h"
 #include "PeerContext.h"
-#include <iostream>
 
 StatsObserver::StatsObserver(shared_ptr<Signaling> signaling, int64_t correlation) : signaling(
 		signaling), correlation(correlation) {
