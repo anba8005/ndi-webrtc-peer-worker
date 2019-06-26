@@ -34,29 +34,39 @@ void NDIReader::open(Configuration config) {
     if (!pNDI_find)
         throw std::runtime_error("Cannot create NDI finder");
 
-    // Wait until there is one source
-    uint32_t no_sources = 0;
-    const NDIlib_source_t *p_sources = nullptr;
-    std::cerr << "Looking for sources ..." << std::endl;
-    while (true) {
-        if (NDIlib_find_wait_for_sources(pNDI_find, 200)) {
-            p_sources = NDIlib_find_get_current_sources(pNDI_find, &no_sources);
-        } else {
-            break;
-        }
-    }
 
-    // filter desired source
-    std::cerr << "Network sources (" << no_sources << " found)" << std::endl;
-    bool found = false;
-    NDIlib_source_t _ndi_source;
-    for (uint32_t i = 0; i < no_sources; i++) {
-        std::cerr << i + 1 << " " << p_sources[i].p_ndi_name << " " << p_sources[i].p_ip_address << std::endl;
-        if (config.name == std::string(p_sources[i].p_ndi_name)) {
-            found = true;
-            _ndi_source = p_sources[i];
-        }
-    }
+    // Find source
+	std::cerr << "Looking for sources ..." << std::endl;
+    uint32_t no_sources = 0;
+	NDIlib_source_t _ndi_source;
+	bool found = false;
+	uint32_t cycles = 0;
+	while (cycles < 30) { // 6 sec max
+		if (NDIlib_find_wait_for_sources(pNDI_find, 200)) {
+			// get available sources
+			const NDIlib_source_t *p_sources = NDIlib_find_get_current_sources(pNDI_find, &no_sources);
+			// find target source
+			for (uint32_t i = 0; i < no_sources; i++) {
+				if (config.name == std::string(p_sources[i].p_ndi_name)) {
+					// found
+					_ndi_source = p_sources[i];
+					found = true;
+					break;
+				}
+			}
+			// proceed if source found
+			if (found) {
+				break;
+			}
+		} else {
+			// show progress
+			if (cycles > 0 && cycles % 5 == 0) {
+				std::cerr << "." << std::endl;
+			}
+		}
+		//
+		cycles++;
+	}
 
     // check if desired source available
     if (!found) {
@@ -185,12 +195,20 @@ json NDIReader::findSources() {
 	uint32_t no_sources = 0;
 	const NDIlib_source_t *p_sources = nullptr;
 	std::cerr << "Looking for sources ..." << std::endl;
-	while (true) {
+	uint32_t cycles = 0;
+	while (cycles < 30) { // 6 sec max
 		if (NDIlib_find_wait_for_sources(pNDI_find, 200)) {
 			p_sources = NDIlib_find_get_current_sources(pNDI_find, &no_sources);
 		} else {
-			break;
+			if (no_sources > 0) {
+				// break if some sources found and no sources again
+				break;
+			} else if (cycles > 0 && cycles % 5 == 0) {
+				std::cerr << "." << std::endl;
+			}
 		}
+		//
+		cycles++;
 	}
 	std::cerr << "Network sources (" << no_sources << " found)" << std::endl;
 
