@@ -4,7 +4,7 @@
 
 #include "VideoDeviceModule.h"
 #include <iostream>
-#include <rtc_base/refcountedobject.h>
+#include <rtc_base/ref_counted_object.h>
 
 const AVPixelFormat WEBRTC_PIXEL_FORMAT = av_get_pix_fmt("yuv420p");
 const AVPixelFormat NDI_PIXEL_FORMAT = av_get_pix_fmt("uyvy422");

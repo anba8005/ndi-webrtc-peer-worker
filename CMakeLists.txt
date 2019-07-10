@@ -5,7 +5,7 @@ project(ndi-webrtc-peer-worker)
 IF (WIN32)
 	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-24472-4ab51cb-win-x64)
 ELSE()
-	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-24472-4ab51cb-linux-x64)
+	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-27678-159c16f-linux-x64)
 ENDIF()
 
 set(CMAKE_CXX_STANDARD 14)

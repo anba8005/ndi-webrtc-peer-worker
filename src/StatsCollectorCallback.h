@@ -5,7 +5,7 @@
 #ifndef GYVAITV_WEBRTC_STATSCOLLECTORCALLBACK_H
 #define GYVAITV_WEBRTC_STATSCOLLECTORCALLBACK_H
 
-#include <api/stats/rtcstatscollectorcallback.h>
+#include <api/stats/rtc_stats_collector_callback.h>
 #include "Signaling.h"
 
 

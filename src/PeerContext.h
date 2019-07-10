@@ -17,10 +17,9 @@
 
 #include "json.hpp"
 
-#include "pc/peerconnectionfactory.h"
-#include "api/peerconnectioninterface.h"
+#include "api/peer_connection_factory_proxy.h"
+#include "api/peer_connection_interface.h"
 #include "PeerFactoryContext.h"
-#include "api/test/fakeconstraints.h"
 #include "NDIWriter.h"
 #include "NDIReader.h"
 #include "StatsCollectorCallback.h"

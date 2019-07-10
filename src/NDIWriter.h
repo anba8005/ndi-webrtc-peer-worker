@@ -12,7 +12,7 @@
 #endif
 
 #include <string>
-#include "api/peerconnectioninterface.h"
+#include "api/peer_connection_interface.h"
 
 #include "json.hpp"
 

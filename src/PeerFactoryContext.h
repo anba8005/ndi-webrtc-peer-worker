@@ -12,7 +12,7 @@
 #endif
 #define USE_BUILTIN_SW_CODECS
 
-#include "pc/peerconnectionfactory.h"
+#include "api/peer_connection_interface.h"
 
 #include "BaseAudioDeviceModule.h"
 #include "VideoDeviceModule.h"

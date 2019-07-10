@@ -7,7 +7,7 @@
 #include "Signaling.h"
 
 #include "rtc_base/logging.h"
-#include "rtc_base/ssladapter.h"
+#include "rtc_base/ssl_adapter.h"
 
 #include <Processing.NDI.Lib.h>
 

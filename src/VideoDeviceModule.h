@@ -11,7 +11,7 @@
 #undef max
 #endif
 
-#include "media/base/adaptedvideotracksource.h"
+#include "media/base/adapted_video_track_source.h"
 #include "api/video/i420_buffer.h"
 
 #include <thread>
