@@ -78,7 +78,7 @@ void NDIReader::open(Configuration config) {
         NDIlib_recv_create_v3_t recv_create_desc;
         recv_create_desc.source_to_connect_to = _ndi_source;
         recv_create_desc.bandwidth = NDIlib_recv_bandwidth_highest;
-        recv_create_desc.color_format = NDIlib_recv_color_format_UYVY_RGBA;
+        recv_create_desc.color_format = NDIlib_recv_color_format_fastest;
         recv_create_desc.p_ndi_recv_name = "NDIReader";
         recv_create_desc.allow_video_fields = false;
 
