@@ -164,7 +164,7 @@ void NDIWriter::OnData(const void *audio_data, int bits_per_sample,
     NDIlib_audio_frame_interleaved_16s_t NDI_audio_frame;
     NDI_audio_frame.sample_rate = sample_rate;
     NDI_audio_frame.no_channels = number_of_channels;
-    NDI_audio_frame.no_samples = number_of_frames * (number_of_channels << 1); //  from ffmpeg
+    NDI_audio_frame.no_samples = number_of_frames;
     NDI_audio_frame.p_data = (int16_t *) audio_data;
 
     // send
