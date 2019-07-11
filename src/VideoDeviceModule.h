@@ -11,6 +11,9 @@
 #undef max
 #endif
 
+#define _WINSOCK2API_
+#define _WINSOCKAPI_
+
 #include "media/base/adapted_video_track_source.h"
 #include "api/video/i420_buffer.h"
 

@@ -5,6 +5,11 @@
 #include "CreateSessionDescriptionObserver.h"
 #include <iostream>
 
+#define _WINSOCK2API_
+#define _WINSOCKAPI_
+
+#include <rtc_base/ref_counted_object.h>
+
 CreateSessionDescriptionObserver::CreateSessionDescriptionObserver(shared_ptr<Signaling> signaling, string command,
                                                                    int64_t correlation) : signaling(signaling),
                                                                                           command(command),

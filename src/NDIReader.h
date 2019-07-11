@@ -12,8 +12,8 @@
 #include "json.hpp"
 
 #include <Processing.NDI.Lib.h>
-#include "VideoDeviceModule.h"
 #include "BaseAudioDeviceModule.h"
+#include "VideoDeviceModule.h"
 
 using json = nlohmann::json;
 

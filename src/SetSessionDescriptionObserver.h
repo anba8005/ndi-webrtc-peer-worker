@@ -6,7 +6,6 @@
 #define GYVAITV_WEBRTC_SETSESSIONDESCRIPTIONOBSERVER_H
 
 #include <api/jsep.h>
-#include <rtc_base/ref_counted_object.h>
 #include <string>
 #include <memory>
 
