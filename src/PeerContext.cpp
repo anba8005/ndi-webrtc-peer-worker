@@ -226,14 +226,34 @@ void PeerContext::addTrack(json payload, int64_t correlation) {
 		return;
 	}
 
-	// create audio options
+	// create audio options & set defaults
 	cricket::AudioOptions options;
-	options.auto_gain_control = audioOptions.value("autoGainControl", false);
-	options.noise_suppression = audioOptions.value("noiseSuppression", false);
-	options.highpass_filter = audioOptions.value("highPassFilter", false);
-	options.echo_cancellation = audioOptions.value("echoCancelation", false);
-	options.typing_detection = audioOptions.value("typingDetection", false);
-	options.residual_echo_detector = audioOptions.value("residualEchoDetector", false);
+    options.delay_agnostic_aec = true;
+
+    // get from user config
+	if (audioOptions.find("autoGainControl") != audioOptions.end()) {
+        options.auto_gain_control = audioOptions.value("autoGainControl", false);
+	}
+    if (audioOptions.find("noiseSuppression") != audioOptions.end()) {
+        options.noise_suppression = audioOptions.value("noiseSuppression", false);
+    }
+    if (audioOptions.find("highPassFilter") != audioOptions.end()) {
+        options.highpass_filter = audioOptions.value("highPassFilter", false);
+    }
+    if (audioOptions.find("echoCancellation") != audioOptions.end()) {
+        options.echo_cancellation = audioOptions.value("echoCancellation", false);
+        if (!options.echo_cancellation) {
+            options.delay_agnostic_aec = false;
+        }
+    }
+    if (audioOptions.find("typingDetection") != audioOptions.end()) {
+        options.typing_detection = audioOptions.value("typingDetection", false);
+    }
+    if (audioOptions.find("residualEchoDetector") != audioOptions.end()) {
+        options.residual_echo_detector = audioOptions.value("residualEchoDetector", false);
+    }
+
+    std::cerr << options.ToString() << std::endl;
 
 	// create content hint (TODO opitions)
 	webrtc::VideoTrackInterface::ContentHint hint = webrtc::VideoTrackInterface::ContentHint::kFluid;
