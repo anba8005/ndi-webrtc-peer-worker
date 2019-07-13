@@ -77,7 +77,8 @@ void NDIReader::open(Configuration config) {
         // create NDI receiver descriptor
         NDIlib_recv_create_v3_t recv_create_desc;
         recv_create_desc.source_to_connect_to = _ndi_source;
-        recv_create_desc.bandwidth = NDIlib_recv_bandwidth_highest;
+        recv_create_desc.bandwidth = config.lowBandwidth ? NDIlib_recv_bandwidth_lowest : NDIlib_recv_bandwidth_highest;
+        std::cerr << recv_create_desc.bandwidth << std::endl;
         recv_create_desc.color_format = NDIlib_recv_color_format_fastest;
         recv_create_desc.p_ndi_recv_name = "NDIReader";
         recv_create_desc.allow_video_fields = false;
@@ -235,6 +236,7 @@ NDIReader::Configuration::Configuration(json payload) {
     this->ips = payload.value("ips", "");
     this->maxWidth = payload.value("width",0);
     this->maxHeight = payload.value("height",0);
+    this->lowBandwidth = payload.value("lowBandwidth",false);
 
 
 }

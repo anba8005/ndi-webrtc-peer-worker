@@ -25,6 +25,7 @@ public:
         std::string ips = "";
         int maxWidth;
         int maxHeight;
+        bool lowBandwidth;
 
         Configuration(json payload);
     };
@@ -56,6 +57,7 @@ private:
 
     int maxWidth;
     int maxHeight;
+    bool lowBandwidth;
 };
 
 
