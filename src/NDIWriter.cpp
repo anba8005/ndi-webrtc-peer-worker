@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <thread>
+#include "third_party/libyuv/include/libyuv.h"
 
 //#define WEBRTC_TIME_BASE 90000
 //#define WEBRTC_TIME_BASE_Q (AVRational){1, WEBRTC_TIME_BASE}
@@ -17,7 +18,7 @@ const AVPixelFormat WEBRTC_PIXEL_FORMAT = av_get_pix_fmt("yuv420p");
 const AVPixelFormat NDI_PIXEL_FORMAT = av_get_pix_fmt("uyvy422");
 
 NDIWriter::NDIWriter() : _scaling_context(nullptr), _videoTrack(nullptr), _audioTrack(nullptr),
-                         _pNDI_send(nullptr), _p_frame_buffer_idx(0) {
+                         _pNDI_send(nullptr), _p_frame_buffer_idx(0), _rotationBuffer(nullptr) {
     _p_frame_buffers[0] = nullptr;
     _p_frame_buffers[1] = nullptr;
 }
@@ -98,11 +99,47 @@ void NDIWriter::OnFrame(const webrtc::VideoFrame &yuvframe) {
 //	std::cerr << "On video frame: " << yuvframe.width() << 'x' << yuvframe.height() << '@' << yuvframe.timestamp()
 //			  << std::endl;
 
-    int width = _width != 0 ? _width : yuvframe.width();
-    int height = _height != 0 ? _height : yuvframe.height();
+    // detect rotation
+    bool rotatedVertical = yuvframe.rotation() == webrtc::VideoRotation::kVideoRotation_90 ||
+                           yuvframe.rotation() == webrtc::VideoRotation::kVideoRotation_270;
+
+    // define dst width/height
+    int width =
+            _width != 0 && _height != 0 ? (rotatedVertical ? _height : _width) : (rotatedVertical ? yuvframe.height()
+                                                                                                  : yuvframe.width());
+    int height =
+            _width != 0 && _height != 0 ? (rotatedVertical ? _width : _height) : (rotatedVertical ? yuvframe.width()
+                                                                                                  : yuvframe.height());
+
+    //
+    int srcWidth = rotatedVertical ? yuvframe.height() : yuvframe.width();
+    int srcHeight = rotatedVertical ? yuvframe.width() : yuvframe.height();
+
+    //
+    auto yuvbuffer = yuvframe.video_frame_buffer()->GetI420();
+
+    // rotate frame if needed
+    if (yuvframe.rotation() != webrtc::VideoRotation::kVideoRotation_0) {
+        // get rotation mode
+        auto rotationMode = (libyuv::RotationMode) yuvframe.rotation();
+        // get/create buffers
+        if (!_rotationBuffer || _rotationBuffer->width() != width || _rotationBuffer->height() != height) {
+            _rotationBuffer = webrtc::I420Buffer::Create(width, height);
+        }
+        yuvbuffer = _rotationBuffer;
+        auto srcBuffer = yuvframe.video_frame_buffer()->GetI420();
+        // rotate
+        libyuv::I420Rotate(srcBuffer->DataY(), srcBuffer->StrideY(), srcBuffer->DataU(), srcBuffer->StrideU(),
+                           srcBuffer->DataV(), srcBuffer->StrideV(), (uint8_t *) yuvbuffer->DataY(),
+                           yuvbuffer->StrideY(),
+                           (uint8_t *) yuvbuffer->DataU(), yuvbuffer->StrideU(), (uint8_t *) yuvbuffer->DataV(),
+                           yuvbuffer->StrideV(), yuvframe.width(), yuvframe.height(), rotationMode);
+    } else {
+        _rotationBuffer.release();
+    }
 
     // get scaling context
-    _scaling_context = sws_getCachedContext(_scaling_context, yuvframe.width(), yuvframe.height(), WEBRTC_PIXEL_FORMAT,
+    _scaling_context = sws_getCachedContext(_scaling_context, srcWidth, srcHeight, WEBRTC_PIXEL_FORMAT,
                                             width, height, NDI_PIXEL_FORMAT, SWS_BICUBIC, nullptr, nullptr, nullptr);
     if (!_scaling_context) {
         std::cerr << "Scaling context creation error" << std::endl;
@@ -111,7 +148,6 @@ void NDIWriter::OnFrame(const webrtc::VideoFrame &yuvframe) {
 
 
     // get src data & linesizes
-    auto yuvbuffer = yuvframe.video_frame_buffer()->GetI420();
     uint8_t *data[8];
     data[0] = (uint8_t *) yuvbuffer->DataY();
     data[1] = (uint8_t *) yuvbuffer->DataU();
@@ -137,7 +173,7 @@ void NDIWriter::OnFrame(const webrtc::VideoFrame &yuvframe) {
     _p_frame_buffer_idx = _p_frame_buffer_idx == 0 ? 1 : 0; // next time next frame
 
     // scale
-    if (sws_scale(_scaling_context, data, linesize, 0, yuvframe.height(), frame->data, frame->linesize) < 0) {
+    if (sws_scale(_scaling_context, data, linesize, 0, srcHeight, frame->data, frame->linesize) < 0) {
         std::cerr << "Conversion error" << std::endl;
         return;
     }
@@ -197,10 +233,10 @@ AVFrame *NDIWriter::createVideoFrame(AVPixelFormat pixelFmt, int width, int heig
 
 NDIWriter::Configuration::Configuration(json payload) {
     this->name = payload.value("name", "");
-    this->width = payload.value("width",0);
-    this->height = payload.value("height",0);
-    this->frameRate = payload.value("frameRate",0);
-    this->persistent = payload.value("persistent",true);
+    this->width = payload.value("width", 0);
+    this->height = payload.value("height", 0);
+    this->frameRate = payload.value("frameRate", 0);
+    this->persistent = payload.value("persistent", true);
 }
 
 bool NDIWriter::Configuration::isEnabled() {

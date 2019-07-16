@@ -17,6 +17,9 @@ include(CMakeHelpers)
 include(CMakeFindExtensions)
 include(FindWebRTC)
 
+# LIBYUV
+set(LIBYUV_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/libyuv/include)
+
 # FFMPEG
 IF (WIN32)
 	set(FFMPEG_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/avcodec.lib ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/avformat.lib
@@ -67,4 +70,4 @@ add_executable(
 target_compile_options(ndi-webrtc-peer-worker PUBLIC ${COMPILE_OPTIONS})
 target_link_libraries(ndi-webrtc-peer-worker PUBLIC ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} ${FFMPEG_LIBS} ${NDI_LIBS} ${SYSTEM_LIBS})
 target_include_directories(ndi-webrtc-peer-worker PUBLIC ${NDI_INCLUDE_DIR}
-		${FFMPEG_INCLUDE_DIR} ${WEBRTC_INCLUDE_DIR} ${CMAKE_CURRENT_LIST_DIR}/vendor/abseil-cpp)
+		${FFMPEG_INCLUDE_DIR} ${WEBRTC_INCLUDE_DIR} ${LIBYUV_INCLUDE_DIR} ${CMAKE_CURRENT_LIST_DIR}/vendor/abseil-cpp)

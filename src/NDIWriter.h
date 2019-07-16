@@ -13,6 +13,7 @@
 
 #include <string>
 #include "api/peer_connection_interface.h"
+#include "api/video/i420_buffer.h"
 
 #include "json.hpp"
 
@@ -76,6 +77,7 @@ private:
     AVFrame *_p_frame_buffers[2];
     long long _p_frame_buffer_idx;
     SwsContext *_scaling_context;
+    rtc::scoped_refptr<webrtc::I420Buffer> _rotationBuffer;
 
     //
     //
