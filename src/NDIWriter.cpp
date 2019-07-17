@@ -83,7 +83,7 @@ void NDIWriter::setVideoTrack(webrtc::VideoTrackInterface *track) {
     _videoTrack = track;
     if (track) {
         _videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
-        std::cerr << "Video track received" << std::endl;
+        std::cerr << "NDI video track received" << std::endl;
     }
 }
 
@@ -91,7 +91,7 @@ void NDIWriter::setAudioTrack(webrtc::AudioTrackInterface *track) {
     _audioTrack = track;
     if (track) {
         _audioTrack->AddSink(this);
-        std::cerr << "Audio track received" << std::endl;
+        std::cerr << "NDI audio track received" << std::endl;
     }
 }
 
