@@ -22,11 +22,9 @@ set(LIBYUV_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/libyuv/include)
 
 # FFMPEG
 IF (WIN32)
-	set(FFMPEG_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/avcodec.lib ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/avformat.lib
-			${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/avutil.lib ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/swscale.lib
-			${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/avdevice.lib)
+	set(${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/avutil.lib)
 ELSE()
-	set(FFMPEG_LIBS avcodec avformat avutil swscale avdevice)
+	set(FFMPEG_LIBS avutil)
 ENDIF()
 set(FFMPEG_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/include)
 

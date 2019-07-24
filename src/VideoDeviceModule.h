@@ -22,36 +22,24 @@
 #include <mutex>
 #include <condition_variable>
 
-
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libswscale/swscale.h>
-#include <libavutil/pixdesc.h>
-#include <libavutil/imgutils.h>
-}
-
 class VideoDeviceModule : public rtc::AdaptedVideoTrackSource {
 public:
-    VideoDeviceModule();
-    virtual ~VideoDeviceModule();
+	VideoDeviceModule();
 
-    static rtc::scoped_refptr<VideoDeviceModule> Create();
+	virtual ~VideoDeviceModule();
 
-    bool is_screencast() const override;
-    absl::optional<bool> needs_denoising() const override;
-    SourceState state() const override;
-    bool remote() const override;
+	static rtc::scoped_refptr<VideoDeviceModule> Create();
 
-    void feedFrame(int width, int height, const uint8_t *data,const int linesize, int64_t timestamp,
-    		int maxWidth, int maxHeight);
+	bool is_screencast() const override;
 
-protected:
+	absl::optional<bool> needs_denoising() const override;
 
+	SourceState state() const override;
 
-private:
+	bool remote() const override;
 
-    SwsContext* _scaling_context;
-    rtc::scoped_refptr<webrtc::I420Buffer> _webrtc_buffer;
+	void feedFrame(int width, int height, const uint8_t *data, const int linesize, int64_t timestamp,
+	               int maxWidth, int maxHeight);
 
 };
 

@@ -19,18 +19,17 @@
 
 #include <Processing.NDI.Lib.h>
 
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libswscale/swscale.h>
-#include <libavutil/pixdesc.h>
-#include <libavutil/imgutils.h>
-}
-
 using json = nlohmann::json;
 
 class NDIWriter : public rtc::VideoSinkInterface<webrtc::VideoFrame>,
                   public webrtc::AudioTrackSinkInterface {
 public:
+    enum OutputMode {
+        VERTICAL_PAD,
+        VERTICAL_AS_IS,
+        SQUARE
+    };
+
     class Configuration {
     public:
         std::string name;
@@ -38,6 +37,7 @@ public:
         int height = 0;
         int frameRate = 0;
         bool persistent = true;
+        NDIWriter::OutputMode outputMode = VERTICAL_PAD;
 
         bool isEnabled();
 
@@ -66,6 +66,7 @@ private:
     std::string _name;
     int _width;
     int _height;
+    OutputMode _outputMode;
     //
     rtc::scoped_refptr<webrtc::VideoTrackInterface> _videoTrack;
     rtc::scoped_refptr<webrtc::AudioTrackInterface> _audioTrack;
@@ -74,15 +75,24 @@ private:
     NDIlib_send_instance_t _pNDI_send;
     //
     NDIlib_video_frame_v2_t _NDI_video_frame;
-    AVFrame *_p_frame_buffers[2];
-    long long _p_frame_buffer_idx;
-    SwsContext *_scaling_context;
-    rtc::scoped_refptr<webrtc::I420Buffer> _rotationBuffer;
+    std::shared_ptr<uint8_t> _lastVideoFrame;
 
     //
     //
     //
-    AVFrame *createVideoFrame(AVPixelFormat pixelFmt, int width, int height, bool alloc);
+
+    rtc::scoped_refptr<webrtc::I420BufferInterface> processVerticalAsIs(const webrtc::VideoFrame &yuvframe,
+                                                                        int *processedWidth, int *processedHeight,
+                                                                        int *targetWidth, int *targetHeight);
+
+    rtc::scoped_refptr<webrtc::I420BufferInterface> processVerticalPad(const webrtc::VideoFrame &yuvframe,
+                                                                        int *processedWidth, int *processedHeight,
+                                                                        int *targetWidth, int *targetHeight);
+
+	rtc::scoped_refptr<webrtc::I420BufferInterface> processSquare(const webrtc::VideoFrame &yuvframe,
+	                                                                  int *processedWidth, int *processedHeight,
+	                                                                  int *targetWidth, int *targetHeight);
+
 };
 
 #endif //GYVAITV_WEBRTC_NDIWRITER_H
