@@ -287,7 +287,15 @@ NDIWriter::Configuration::Configuration(json payload) {
 	this->height = payload.value("height", 0);
 	this->frameRate = payload.value("frameRate", 0);
 	this->persistent = payload.value("persistent", true);
-	this->outputMode = payload.value("outputMode", VERTICAL_AS_IS);
+	//
+	std::string om = payload.value("outputMode", "");
+	if (om == "vertical") {
+		this->outputMode = VERTICAL_AS_IS;
+	} else if (om == "square") {
+		this->outputMode = SQUARE;
+	} else {
+		this->outputMode = VERTICAL_PAD;
+	}
 }
 
 bool NDIWriter::Configuration::isEnabled() {
