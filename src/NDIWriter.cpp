@@ -27,12 +27,13 @@ NDIWriter::~NDIWriter() {
 
 	NDIlib_send_send_video_async_v2(_pNDI_send, nullptr);
 	NDIlib_send_destroy(_pNDI_send);
-	std::cerr << "close ndi" << std::endl;
+
+	// report
+	std::cerr << "close ndi " << _name << std::endl;
 }
 
 void NDIWriter::open(Configuration config) {
 
-	std::cerr << "open ndi" << std::endl;
 	// validate
 	if (config.name.empty())
 		throw "Cannot run NDI - name is empty";
@@ -42,6 +43,9 @@ void NDIWriter::open(Configuration config) {
 	_width = config.width;
 	_height = config.height;
 	_outputMode = config.outputMode;
+
+	// report
+	std::cerr << "open ndi " << _name << std::endl;
 
 	// Create an NDI source
 	_NDI_send_create_desc.p_ndi_name = _name.c_str();
@@ -67,15 +71,19 @@ void NDIWriter::setVideoTrack(webrtc::VideoTrackInterface *track) {
 	_videoTrack = track;
 	if (track) {
 		_videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
-		std::cerr << "NDI video track received" << std::endl;
-	}
+		std::cerr << "NDI video track received " << _name << std::endl;
+	} else {
+		std::cerr << "NDI video track removed " << _name << std::endl;
+	};
 }
 
 void NDIWriter::setAudioTrack(webrtc::AudioTrackInterface *track) {
 	_audioTrack = track;
 	if (track) {
 		_audioTrack->AddSink(this);
-		std::cerr << "NDI audio track received" << std::endl;
+		std::cerr << "NDI audio track received " << _name << std::endl;
+	} else {
+		std::cerr << "NDI audio track removed " << _name << std::endl;
 	}
 }
 
@@ -129,6 +137,7 @@ void NDIWriter::OnFrame(const webrtc::VideoFrame &yuvframe) {
 	_NDI_video_frame.yres = height;
 	_NDI_video_frame.p_data = frame.get();
 	_NDI_video_frame.line_stride_in_bytes = stride;
+	_NDI_video_frame.timecode = NDIlib_send_timecode_synthesize;
 	NDIlib_send_send_video_async_v2(_pNDI_send, &_NDI_video_frame);
 
 	// save current & clean last
@@ -151,6 +160,7 @@ void NDIWriter::OnData(const void *audio_data, int bits_per_sample,
 	NDI_audio_frame.no_channels = number_of_channels;
 	NDI_audio_frame.no_samples = number_of_frames;
 	NDI_audio_frame.p_data = (int16_t *) audio_data;
+	NDI_audio_frame.timecode = NDIlib_send_timecode_synthesize;
 
 	// send
 	NDIlib_util_send_send_audio_interleaved_16s(_pNDI_send, &NDI_audio_frame);

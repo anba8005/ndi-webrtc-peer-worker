@@ -141,6 +141,10 @@ private:
 
     unique_ptr<NDIWriter::Configuration> writerConfig;
 
+	unique_ptr<NDIWriter> preview;
+
+	unique_ptr<NDIWriter::Configuration> previewConfig;
+
     unique_ptr<NDIReader> reader;
 
     size_t totalTracks;

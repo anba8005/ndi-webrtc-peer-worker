@@ -53,6 +53,11 @@ void PeerContext::createPeer(json configuration, int64_t correlation) {
 		writerConfig.reset(new NDIWriter::Configuration(ndi));
 	}
 	//
+	const json preview = configuration["preview"];
+	if (!preview.empty()) {
+		previewConfig.reset(new NDIWriter::Configuration(preview));
+	}
+	//
 	signaling->replyOk(COMMAND_CREATE_PEER, correlation);
 }
 
@@ -425,11 +430,28 @@ void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> re
 
 		//
 		if (track->kind() == track->kVideoKind) {
-			writer->setVideoTrack(dynamic_cast<webrtc::VideoTrackInterface *>(track.release()));
+			writer->setVideoTrack(dynamic_cast<webrtc::VideoTrackInterface *>(track.get()));
 		} else if (track->kind() == track->kAudioKind) {
-			writer->setAudioTrack(dynamic_cast<webrtc::AudioTrackInterface *>(track.release()));
+			writer->setAudioTrack(dynamic_cast<webrtc::AudioTrackInterface *>(track.get()));
 		}
 	}
+	//
+	if (previewConfig && previewConfig->isEnabled()) {
+		//
+		if (!preview) {
+			preview = make_unique<NDIWriter>();
+			preview->open(*(previewConfig.get()));
+		}
+
+		//
+		if (track->kind() == track->kVideoKind) {
+			preview->setVideoTrack(dynamic_cast<webrtc::VideoTrackInterface *>(track.get()));
+		} else if (track->kind() == track->kAudioKind) {
+			preview->setAudioTrack(dynamic_cast<webrtc::AudioTrackInterface *>(track.get()));
+		}
+	}
+	//
+	track.release();
 	//
 	totalTracks++;
 }
@@ -451,10 +473,22 @@ void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface>
 		}
 	}
 	//
+	if (preview) {
+		if (track->kind() == track->kVideoKind) {
+			preview->setVideoTrack(nullptr);
+		} else if (track->kind() == track->kAudioKind) {
+			preview->setAudioTrack(nullptr);
+		}
+	}
+	//
 	totalTracks--;
 	//
-	if (totalTracks == 0 && writerConfig && !writerConfig->persistent)
-		writer.reset();
+	if (totalTracks == 0) {
+		if (writerConfig && !writerConfig->persistent)
+			writer.reset();
+		if (previewConfig && !previewConfig->persistent)
+			preview.reset();
+	}
 }
 
 //
