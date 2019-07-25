@@ -459,13 +459,14 @@ void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> re
 }
 
 void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) {
-	std::cerr << "on remove track -----------------------" << std::endl;
 	auto track = receiver->track();
 	json payload;
 	payload["kind"] = track->kind();
 	payload["id"] = track->id();
 	//
 	signaling->state("OnRemoveTrack", payload);
+	//
+	//
 	//
 	if (writer) {
 		if (track->kind() == track->kVideoKind) {
