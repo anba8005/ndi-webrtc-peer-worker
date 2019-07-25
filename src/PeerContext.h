@@ -147,7 +147,7 @@ private:
 
     unique_ptr<NDIReader> reader;
 
-    size_t totalTracks;
+    std::map<std::string,std::string> receivedTracks;
 };
 
 

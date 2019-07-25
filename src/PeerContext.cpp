@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-PeerContext::PeerContext(shared_ptr<Signaling> signaling) : signaling(signaling), totalTracks(0) {
+PeerContext::PeerContext(shared_ptr<Signaling> signaling) : signaling(signaling) {
 
 }
 
@@ -451,9 +451,11 @@ void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> re
 		}
 	}
 	//
-	track.release();
+	try {
+		receivedTracks[track->id()] = streams.at(0)->id();
+	} catch (...) {}
 	//
-	totalTracks++;
+	track.release();
 }
 
 void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) {
@@ -481,14 +483,30 @@ void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface>
 		}
 	}
 	//
-	totalTracks--;
+	// stop writers if no tracks left or removing last track from praticular stream
 	//
-	if (totalTracks == 0) {
+	bool shouldStop = false;
+	try {
+		auto stream = receivedTracks.at(track->id());
+		for (auto i = receivedTracks.begin(); i != receivedTracks.end(); i++) {
+			if (track->id() != i->first) {
+				shouldStop = shouldStop || stream != i->second;
+			}
+		}
+	} catch (...) {}
+	//
+	receivedTracks.erase(track->id());
+	//
+	if (receivedTracks.size() == 0 || shouldStop) {
 		if (writerConfig && !writerConfig->persistent)
 			writer.reset();
 		if (previewConfig && !previewConfig->persistent)
 			preview.reset();
 	}
+	//
+	//
+	//
+	track.release();
 }
 
 //
