@@ -5,4 +5,6 @@ cmake-build-release/
 vendor/webrtc/
 vendor/ffmpeg/
 vendor/ndi/
+build/
+bin/
 
