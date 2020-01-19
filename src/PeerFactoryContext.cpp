@@ -21,7 +21,7 @@
 
 PeerFactoryContext::PeerFactoryContext() {
     //
-    // webrtc::field_trial::InitFieldTrialsFromString("WebRTC-FlexFEC-03-Advertised/WebRTC-FlexFEC-03/");
+    webrtc::field_trial::InitFieldTrialsFromString("WebRTC-FlexFEC-03-Advertised/Enabled/WebRTC-FlexFEC-03/Enabled/");
 
     // Setup threads
     networkThread = rtc::Thread::CreateWithSocketServer();

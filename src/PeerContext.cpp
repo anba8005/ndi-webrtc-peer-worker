@@ -234,6 +234,11 @@ void PeerContext::addTrack(json payload, int64_t correlation) {
 	// create audio options & set defaults
 	cricket::AudioOptions options;
     options.delay_agnostic_aec = true;
+    options.auto_gain_control = false;
+    options.noise_suppression = false;
+    options.highpass_filter = false;
+    options.typing_detection = false;
+    options.residual_echo_detector = false;
 
     // get from user config
 	if (audioOptions.find("autoGainControl") != audioOptions.end()) {
