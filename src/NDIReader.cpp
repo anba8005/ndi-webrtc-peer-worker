@@ -144,7 +144,7 @@ void NDIReader::run() {
             case NDIlib_frame_type_audio:
                 // Allocate enough space for 16bpp interleaved buffer
 
-                audio_frame_16bpp_interleaved.reference_level = 12;     // We are going to have 16dB of headroom
+                audio_frame_16bpp_interleaved.reference_level = 4;
                 audio_frame_16bpp_interleaved.p_data = new int16_t[audio_frame.no_samples * audio_frame.no_channels];
                 audio_frame_16bpp_interleaved.sample_rate = audio_frame.sample_rate;
                 audio_frame_16bpp_interleaved.no_channels = audio_frame.no_samples;
