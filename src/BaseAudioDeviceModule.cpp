@@ -99,7 +99,7 @@ bool BaseAudioDeviceModule::shouldStartProcessing() {
 void BaseAudioDeviceModule::updateProcessing(bool start) {
     if (start) {
         if (!_processThread) {
-            _processThread.reset(new rtc::Thread());
+            _processThread = rtc::Thread::Create();
             _processThread->Start();
         }
         _processThread->Post(RTC_FROM_HERE, this, MSG_START_PROCESS);

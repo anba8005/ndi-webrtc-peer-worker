@@ -192,7 +192,7 @@ NDIWriter::processVerticalAsIs(const webrtc::VideoFrame &yuvframe, int *processe
 	*processedHeight = rotatedVertical ? yuvframe.width() : yuvframe.height();
 
 	// get frame buffer
-	auto srcBuffer = yuvframe.video_frame_buffer()->GetI420();
+	auto srcBuffer = yuvframe.video_frame_buffer()->ToI420();
 
 	// rotate frame if needed
 	if (yuvframe.rotation() != webrtc::VideoRotation::kVideoRotation_0) {
@@ -223,7 +223,7 @@ NDIWriter::processVerticalPad(const webrtc::VideoFrame &yuvframe, int *processed
 	*processedHeight = rotatedVertical ? *targetHeight : yuvframe.height();
 
 	// get frame buffer
-	auto srcBuffer = yuvframe.video_frame_buffer()->GetI420();
+	auto srcBuffer = yuvframe.video_frame_buffer()->ToI420();
 
 	// rotate frame if needed
 	if (yuvframe.rotation() != webrtc::VideoRotation::kVideoRotation_0) {
@@ -277,7 +277,7 @@ NDIWriter::processSquare(const webrtc::VideoFrame &yuvframe, int *processedWidth
 	*processedHeight = *processedWidth;
 
 	// get frame buffer
-	auto srcBuffer = yuvframe.video_frame_buffer()->GetI420();
+	auto srcBuffer = yuvframe.video_frame_buffer()->ToI420();
 
 	// crop
 	auto croppedBuffer = webrtc::I420Buffer::Create(*processedWidth, *processedHeight);

@@ -4,9 +4,9 @@ set(EXECUTABLE_OUTPUT_PATH "bin")
 
 # WEBRTC
 IF (WIN32)
-	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-27678-159c16f-win-x64)
+	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-8708428-linux-x64)
 ELSE()
-	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-27678-159c16f-linux-x64)
+	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-8708428-linux-x64)
 ENDIF()
 
 set(CMAKE_CXX_STANDARD 14)
@@ -64,7 +64,7 @@ add_executable(
 		src/BaseAudioDeviceModule.cpp src/BaseAudioDeviceModule.h
 		src/AudioBuffer.cpp src/AudioBuffer.h
 		src/VideoDeviceModule.cpp src/VideoDeviceModule.h
-		src/NDIReader.cpp src/NDIReader.h src/StatsCollectorCallback.cpp src/StatsCollectorCallback.h src/StatsObserver.cpp src/StatsObserver.h)
+		src/NDIReader.cpp src/NDIReader.h src/StatsCollectorCallback.cpp src/StatsCollectorCallback.h src/StatsObserver.cpp src/StatsObserver.h src/webrtc/SoftwareDecoderFactory.cpp src/webrtc/SoftwareDecoderFactory.h src/webrtc/SoftwareEncoderFactory.cpp src/webrtc/SoftwareEncoderFactory.h src/webrtc/CodecUtils.cpp src/webrtc/CodecUtils.h)
 
 target_compile_options(ndi-webrtc-peer-worker PUBLIC ${COMPILE_OPTIONS})
 set_target_properties(ndi-webrtc-peer-worker PROPERTIES LINK_FLAGS_RELEASE -s)

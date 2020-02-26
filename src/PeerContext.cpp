@@ -233,7 +233,7 @@ void PeerContext::addTrack(json payload, int64_t correlation) {
 
 	// create audio options & set defaults
 	cricket::AudioOptions options;
-    options.delay_agnostic_aec = true;
+//    options.delay_agnostic_aec = true;
     options.auto_gain_control = false;
     options.noise_suppression = false;
     options.highpass_filter = false;
@@ -252,9 +252,9 @@ void PeerContext::addTrack(json payload, int64_t correlation) {
     }
     if (audioOptions.find("echoCancellation") != audioOptions.end()) {
         options.echo_cancellation = audioOptions.value("echoCancellation", false);
-        if (!options.echo_cancellation) {
-            options.delay_agnostic_aec = false;
-        }
+//        if (!options.echo_cancellation) {
+//            options.delay_agnostic_aec = false;
+//        }
     }
     if (audioOptions.find("typingDetection") != audioOptions.end()) {
         options.typing_detection = audioOptions.value("typingDetection", false);
