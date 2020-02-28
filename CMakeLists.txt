@@ -23,11 +23,11 @@ set(LIBYUV_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/libyuv/include)
 
 # FFMPEG
 IF (WIN32)
-	set(${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/avutil.lib)
+	#
 ELSE()
-	set(FFMPEG_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/lib/libavutil.a)
+	set(FFMPEG_CONFIG_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/ffmpeg/chromium/config/Chrome/linux/x64)
 ENDIF()
-set(FFMPEG_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ffmpeg/include)
+set(FFMPEG_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/ffmpeg)
 
 # NDI
 IF (WIN32)
@@ -68,6 +68,7 @@ add_executable(
 
 target_compile_options(ndi-webrtc-peer-worker PUBLIC ${COMPILE_OPTIONS})
 set_target_properties(ndi-webrtc-peer-worker PROPERTIES LINK_FLAGS_RELEASE -s)
-target_link_libraries(ndi-webrtc-peer-worker PUBLIC ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} ${FFMPEG_LIBS} ${NDI_LIBS} ${SYSTEM_LIBS})
+target_link_libraries(ndi-webrtc-peer-worker PUBLIC ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} ${NDI_LIBS} ${SYSTEM_LIBS})
 target_include_directories(ndi-webrtc-peer-worker PUBLIC ${NDI_INCLUDE_DIR}
-		${FFMPEG_INCLUDE_DIR} ${WEBRTC_INCLUDE_DIR} ${LIBYUV_INCLUDE_DIR} ${CMAKE_CURRENT_LIST_DIR}/vendor/abseil-cpp)
+		${FFMPEG_INCLUDE_DIR} ${FFMPEG_CONFIG_INCLUDE_DIR} ${WEBRTC_INCLUDE_DIR} ${LIBYUV_INCLUDE_DIR}
+		${CMAKE_CURRENT_LIST_DIR}/vendor/abseil-cpp)
