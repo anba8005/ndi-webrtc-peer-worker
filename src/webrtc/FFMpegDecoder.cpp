@@ -34,7 +34,8 @@ const size_t kYPlaneIndex = 0;
 const size_t kUPlaneIndex = 1;
 const size_t kVPlaneIndex = 2;
 
-FFMpegDecoder::FFMpegDecoder() : pool_(true), decoded_image_callback_(nullptr) {
+FFMpegDecoder::FFMpegDecoder() : pool_(true), decoded_image_callback_(nullptr), packet_data_(nullptr),
+                                 packet_data_size_(0) {
 }
 
 FFMpegDecoder::~FFMpegDecoder() {
@@ -91,6 +92,10 @@ int32_t FFMpegDecoder::InitDecode(const webrtc::VideoCodec *codec_settings, int3
 }
 
 int32_t FFMpegDecoder::Release() {
+    if (packet_data_) {
+        av_freep(&packet_data_);
+        packet_data_size_ = 0;
+    }
     av_context_.reset();
     av_frame_.reset();
     return WEBRTC_VIDEO_CODEC_OK;
@@ -115,16 +120,25 @@ int32_t FFMpegDecoder::Decode(const webrtc::EncodedImage &input_image, bool, int
         return WEBRTC_VIDEO_CODEC_ERR_PARAMETER;
     }
 
-    AVPacket packet;
-    av_init_packet(&packet);
-    packet.data = input_image.mutable_data();
     if (input_image.size() >
         static_cast<size_t>(std::numeric_limits<int>::max())) {
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
+
+    AVPacket packet;
+    av_init_packet(&packet);
     packet.size = static_cast<int>(input_image.size());
+    av_fast_mallocz(&packet_data_, &packet_data_size_, packet.size + AV_INPUT_BUFFER_PADDING_SIZE);
+    if (!packet_data_) {
+        RTC_LOG(LS_ERROR) << "av_fast_malloc for packet error";
+        return WEBRTC_VIDEO_CODEC_ERROR;
+    }
+    packet.data = packet_data_;
+    memcpy(packet.data, input_image.mutable_data(), input_image.size());
+
     int64_t frame_timestamp_us = input_image.ntp_time_ms_ * 1000;  // ms -> μs
     av_context_->reordered_opaque = frame_timestamp_us;
+
 
     int result = avcodec_send_packet(av_context_.get(), &packet);
     if (result < 0) {

@@ -62,7 +62,8 @@ private:
     webrtc::I420BufferPool pool_;
     std::unique_ptr<AVCodecContext, AVCodecContextDeleter> av_context_;
     std::unique_ptr<AVFrame, AVFrameDeleter> av_frame_;
-
+    uint8_t* packet_data_;
+    unsigned int packet_data_size_;
     webrtc::DecodedImageCallback *decoded_image_callback_;
 
 };
