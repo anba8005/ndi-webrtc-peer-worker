@@ -6,7 +6,7 @@
 
 #include "SoftwareDecoderFactory.h"
 #include "CodecUtils.h"
-#include "H265Decoder.h"
+#include "FFMpegDecoder.h"
 #include "api/video_codecs/builtin_video_decoder_factory.h"
 #include "modules/video_coding/codecs/h264/include/h264.h"
 #include "modules/video_coding/codecs/vp8/include/vp8.h"
@@ -46,7 +46,7 @@ std::unique_ptr<webrtc::VideoDecoder> SoftwareDecoderFactory::CreateVideoDecoder
     if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName))
         return webrtc::H264Decoder::Create();
     if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName)) {
-        return H265Decoder::Create();
+        return FFMpegDecoder::Create();
     }
     return nullptr;
 }
