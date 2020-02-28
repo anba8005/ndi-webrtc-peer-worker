@@ -16,6 +16,9 @@
 #include "pc/peer_connection.h"
 #include "system_wrappers/include/field_trial.h"
 
+#include "webrtc/SoftwareDecoderFactory.h"
+#include "webrtc/SoftwareEncoderFactory.h"
+
 #include <memory>
 #include <iostream>
 
@@ -47,7 +50,8 @@ PeerFactoryContext::PeerFactoryContext() {
     factory = webrtc::CreatePeerConnectionFactory(
             networkThread.get(), workerThread.get(), rtc::Thread::Current(),
             adm, webrtc::CreateBuiltinAudioEncoderFactory(), webrtc::CreateBuiltinAudioDecoderFactory(),
-            webrtc::CreateBuiltinVideoEncoderFactory(), webrtc::CreateBuiltinVideoDecoderFactory(), nullptr, nullptr);
+//            webrtc::CreateBuiltinVideoEncoderFactory(), webrtc::CreateBuiltinVideoDecoderFactory(), nullptr, nullptr);
+    SoftwareEncoderFactory::Create(), SoftwareDecoderFactory::Create(), nullptr, nullptr);
 
     // validate
     if (!factory)
