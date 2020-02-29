@@ -12,8 +12,8 @@
 // Created by anba8005 on 28/02/2020.
 //
 
-#ifndef NDI_WEBRTC_PEER_WORKER_FFMPEGDECODER_H
-#define NDI_WEBRTC_PEER_WORKER_FFMPEGDECODER_H
+#ifndef NDI_WEBRTC_PEER_WORKER_FFMPEGVIDEODECODER_H
+#define NDI_WEBRTC_PEER_WORKER_FFMPEGVIDEODECODER_H
 
 #define OWT_ENABLE_H265
 
@@ -40,11 +40,11 @@ struct AVBufferDeleter {
 };
 
 
-class RTC_EXPORT FFMpegDecoder : public webrtc::VideoDecoder {
+class RTC_EXPORT FFmpegVideoDecoder : public webrtc::VideoDecoder {
 public:
-    explicit FFMpegDecoder(std::string codec_name);
+    explicit FFmpegVideoDecoder(std::string codec_name);
 
-    ~FFMpegDecoder() override;
+    ~FFmpegVideoDecoder() override;
 
     int32_t InitDecode(const webrtc::VideoCodec *codec_settings, int32_t number_of_cores) override;
 
@@ -60,7 +60,7 @@ public:
 
     static bool IsSupported();
 
-    static std::unique_ptr<FFMpegDecoder> Create(std::string codec_name);
+    static std::unique_ptr<FFmpegVideoDecoder> Create(std::string codec_name);
 
 private:
     bool IsInitialized() const;
@@ -86,4 +86,4 @@ private:
 
 };
 
-#endif //NDI_WEBRTC_PEER_WORKER_FFMPEGDECODER_H
+#endif //NDI_WEBRTC_PEER_WORKER_FFMPEGVIDEODECODER_H
