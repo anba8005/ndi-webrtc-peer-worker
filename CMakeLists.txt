@@ -41,7 +41,7 @@ set(NDI_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/include)
 IF (WIN32)
 	#set(NDI_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/lib/x64/Processing.NDI.Lib.x64.lib)
 ELSE()
-	set(SYSTEM_LIBS pthread dl)
+	set(SYSTEM_LIBS pthread dl va va-drm)
 ENDIF()
 
 # Compile options
