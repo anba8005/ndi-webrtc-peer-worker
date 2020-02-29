@@ -19,6 +19,7 @@
 
 extern "C" {
 #include "libavcodec/avcodec.h"
+#include "libavutil/hwcontext.h"
 }
 
 #include "media/base/codec.h"
@@ -34,9 +35,14 @@ struct AVFrameDeleter {
     void operator()(AVFrame *ptr) const { av_frame_free(&ptr); }
 };
 
+struct AVBufferDeleter {
+    void operator()(AVBufferRef *ptr) const { av_buffer_unref(&ptr); }
+};
+
+
 class RTC_EXPORT FFMpegDecoder : public webrtc::VideoDecoder {
 public:
-    explicit FFMpegDecoder();
+    explicit FFMpegDecoder(std::string codec_name);
 
     ~FFMpegDecoder() override;
 
@@ -54,17 +60,29 @@ public:
 
     static bool IsSupported();
 
-    static std::unique_ptr<FFMpegDecoder> Create();
+    static std::unique_ptr<FFMpegDecoder> Create(std::string codec_name);
 
 private:
     bool IsInitialized() const;
 
+    bool createHWContext(AVHWDeviceType type);
+    AVHWDeviceType findHWDeviceType(const char* name);
+    AVPixelFormat findHWPixelFormat(AVHWDeviceType type, AVCodec* codec);
+    AVCodecID findCodecID(webrtc::VideoCodecType type);
+    webrtc::VideoCodecType findCodecType(std::string name);
+
+    webrtc::VideoCodecType codec_type_;
     webrtc::I420BufferPool pool_;
     std::unique_ptr<AVCodecContext, AVCodecContextDeleter> av_context_;
     std::unique_ptr<AVFrame, AVFrameDeleter> av_frame_;
+    std::unique_ptr<AVFrame, AVFrameDeleter> sw_frame_;
+    std::unique_ptr<AVBufferRef, AVBufferDeleter> hw_context_;
+    AVPixelFormat hw_pixel_format_;
     uint8_t* packet_data_;
     unsigned int packet_data_size_;
     webrtc::DecodedImageCallback *decoded_image_callback_;
+
+    static AVPixelFormat getHWFormat(AVCodecContext* ctx, const AVPixelFormat* pix_fmts);
 
 };
 

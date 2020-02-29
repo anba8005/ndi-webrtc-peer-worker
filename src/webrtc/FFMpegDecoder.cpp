@@ -34,8 +34,10 @@ const size_t kYPlaneIndex = 0;
 const size_t kUPlaneIndex = 1;
 const size_t kVPlaneIndex = 2;
 
-FFMpegDecoder::FFMpegDecoder() : pool_(true), decoded_image_callback_(nullptr), packet_data_(nullptr),
-                                 packet_data_size_(0) {
+FFMpegDecoder::FFMpegDecoder(std::string codec_name) : pool_(true), decoded_image_callback_(nullptr),
+                                                       packet_data_(nullptr), packet_data_size_(0),
+                                                       hw_pixel_format_(AV_PIX_FMT_NONE) {
+    codec_type_ = findCodecType(codec_name);
 }
 
 FFMpegDecoder::~FFMpegDecoder() {
@@ -43,7 +45,7 @@ FFMpegDecoder::~FFMpegDecoder() {
 }
 
 int32_t FFMpegDecoder::InitDecode(const webrtc::VideoCodec *codec_settings, int32_t number_of_cores) {
-    if (codec_settings && codec_settings->codecType != webrtc::kVideoCodecH265) {
+    if (codec_settings && codec_settings->codecType != codec_type_) {
         return WEBRTC_VIDEO_CODEC_ERR_PARAMETER;
     }
 
@@ -54,11 +56,14 @@ int32_t FFMpegDecoder::InitDecode(const webrtc::VideoCodec *codec_settings, int3
     }
     RTC_DCHECK(!av_context_);
 
+    // get HW device type
+    AVHWDeviceType type = findHWDeviceType("vaapi");
+
     // Initialize AVCodecContext.
     av_context_.reset(avcodec_alloc_context3(nullptr));
 
     av_context_->codec_type = AVMEDIA_TYPE_VIDEO;
-    av_context_->codec_id = AV_CODEC_ID_H265;
+    av_context_->codec_id = findCodecID(codec_type_);
     if (codec_settings) {
         av_context_->coded_width = codec_settings->width;
         av_context_->coded_height = codec_settings->height;
@@ -80,6 +85,19 @@ int32_t FFMpegDecoder::InitDecode(const webrtc::VideoCodec *codec_settings, int3
         Release();
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
+
+    // init HW part if available
+    if (type != AV_HWDEVICE_TYPE_NONE) {
+        // find pixel format
+        hw_pixel_format_ = findHWPixelFormat(type, codec);
+        //
+        av_context_->get_format = getHWFormat;
+        av_context_->opaque = this;
+        //
+        if (!createHWContext(type))
+            return WEBRTC_VIDEO_CODEC_ERROR;
+    }
+
     int res = avcodec_open2(av_context_.get(), codec, nullptr);
     if (res < 0) {
         RTC_LOG(LS_ERROR) << "avcodec_open2 error: " << res;
@@ -88,6 +106,10 @@ int32_t FFMpegDecoder::InitDecode(const webrtc::VideoCodec *codec_settings, int3
     }
 
     av_frame_.reset(av_frame_alloc());
+
+    if (type != AV_HWDEVICE_TYPE_NONE)
+        sw_frame_.reset(av_frame_alloc());
+
     return WEBRTC_VIDEO_CODEC_OK;
 }
 
@@ -98,8 +120,12 @@ int32_t FFMpegDecoder::Release() {
     }
     av_context_.reset();
     av_frame_.reset();
+    sw_frame_.reset();
+    hw_context_.reset();
+    hw_pixel_format_ = AV_PIX_FMT_NONE;
     return WEBRTC_VIDEO_CODEC_OK;
 }
+
 
 int32_t FFMpegDecoder::RegisterDecodeCompleteCallback(webrtc::DecodedImageCallback *callback) {
     decoded_image_callback_ = callback;
@@ -156,18 +182,36 @@ int32_t FFMpegDecoder::Decode(const webrtc::EncodedImage &input_image, bool, int
     // the input one.
     RTC_DCHECK_EQ(av_frame_->reordered_opaque, frame_timestamp_us);
 
+    AVFrame *frame;
+    if (av_frame_->format == hw_pixel_format_) {
+        /* retrieve data from GPU to CPU */
+        if (av_hwframe_transfer_data(sw_frame_.get(), av_frame_.get(), 0) < 0) {
+            RTC_LOG(LS_ERROR) << "Error transferring the data to system memory" << result;
+            return WEBRTC_VIDEO_CODEC_ERROR;
+        }
+        frame = sw_frame_.get();
+    } else {
+        frame = av_frame_.get();
+    }
 
     // Create output buffer
-    rtc::scoped_refptr<webrtc::I420Buffer> buffer = pool_.CreateBuffer(av_frame_->width, av_frame_->height);
+    rtc::scoped_refptr<webrtc::I420Buffer> buffer = pool_.CreateBuffer(frame->width, frame->height);
     RTC_DCHECK(buffer.get());
 
-    // Fill output buffer
-    RTC_CHECK_EQ(0, libyuv::I420Copy(av_frame_->data[0], av_frame_->linesize[0], av_frame_->data[1],
-                                     av_frame_->linesize[1], av_frame_->data[2], av_frame_->linesize[2],
-                                     buffer->MutableDataY(),
-                                     buffer->StrideY(), buffer->MutableDataU(),
-                                     buffer->StrideU(), buffer->MutableDataV(),
-                                     buffer->StrideV(), av_frame_->width, av_frame_->height));
+    if (frame->format == AV_PIX_FMT_YUV420P) {
+        // Fill output buffer
+        RTC_CHECK_EQ(0, libyuv::I420Copy(frame->data[0], frame->linesize[0], frame->data[1],
+                                         frame->linesize[1], frame->data[2], frame->linesize[2],
+                                         buffer->MutableDataY(),
+                                         buffer->StrideY(), buffer->MutableDataU(),
+                                         buffer->StrideU(), buffer->MutableDataV(),
+                                         buffer->StrideV(), frame->width, frame->height));
+    } else if (frame->format == AV_PIX_FMT_NV12) {
+        RTC_CHECK_EQ(0, libyuv::NV12ToI420(frame->data[0], frame->linesize[0], frame->data[1], frame->linesize[1],
+                                           buffer->MutableDataY(), buffer->StrideY(), buffer->MutableDataU(),
+                                           buffer->StrideU(), buffer->MutableDataV(),
+                                           buffer->StrideV(), frame->width, frame->height));
+    }
 
 
     webrtc::VideoFrame decoded_frame = webrtc::VideoFrame::Builder()
@@ -193,7 +237,93 @@ bool FFMpegDecoder::IsSupported() {
     return true;
 }
 
-std::unique_ptr<FFMpegDecoder> FFMpegDecoder::Create() {
-    return absl::make_unique<FFMpegDecoder>();
+std::unique_ptr<FFMpegDecoder> FFMpegDecoder::Create(std::string codec_name) {
+    return absl::make_unique<FFMpegDecoder>(codec_name);
+}
+
+bool FFMpegDecoder::createHWContext(AVHWDeviceType type) {
+    AVBufferRef *context = nullptr;
+    int result = av_hwdevice_ctx_create(&context, type, NULL, NULL, 0);
+    if (result < 0) {
+        RTC_LOG(LS_WARNING) << "Failed to create specified HW device: " << result;
+        return false;
+    }
+
+    RTC_DCHECK(context);
+    RTC_DCHECK(av_context_.get());
+
+    av_context_->hw_device_ctx = av_buffer_ref(context);
+    hw_context_.reset(context);
+
+    return true;
+}
+
+AVHWDeviceType FFMpegDecoder::findHWDeviceType(const char *name) {
+    AVHWDeviceType type = av_hwdevice_find_type_by_name(name);
+    if (type == AV_HWDEVICE_TYPE_NONE) {
+        RTC_LOG(LS_ERROR) << "Device type " << name << " is not supported";
+        RTC_LOG(LS_ERROR) << "Available device types:";
+        while ((type = av_hwdevice_iterate_types(type)) != AV_HWDEVICE_TYPE_NONE)
+            RTC_LOG(LS_ERROR) << av_hwdevice_get_type_name(type);
+    }
+    return type;
+}
+
+AVPixelFormat FFMpegDecoder::findHWPixelFormat(AVHWDeviceType type, AVCodec *codec) {
+    for (int i = 0;; i++) {
+        const AVCodecHWConfig *config = avcodec_get_hw_config(codec, i);
+        if (!config) {
+            RTC_LOG(LS_ERROR) << "Decoder " << codec->name << " does not support device type "
+                              << av_hwdevice_get_type_name(type);
+            return AV_PIX_FMT_NONE;
+        }
+        if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX && config->device_type == type) {
+            return config->pix_fmt;
+        }
+    }
+}
+
+AVPixelFormat FFMpegDecoder::getHWFormat(AVCodecContext *ctx, const AVPixelFormat *pix_fmts) {
+    FFMpegDecoder *decoder = static_cast<FFMpegDecoder *>(ctx->opaque);
+    RTC_DCHECK(decoder);
+
+    const enum AVPixelFormat *p;
+
+    for (p = pix_fmts; *p != -1; p++) {
+        if (*p == decoder->hw_pixel_format_)
+            return *p;
+    }
+
+    RTC_LOG(LS_ERROR) << "Failed to get HW surface format";
+    return AV_PIX_FMT_NONE;
+}
+
+AVCodecID FFMpegDecoder::findCodecID(webrtc::VideoCodecType type) {
+    switch (type) {
+        case webrtc::kVideoCodecVP8:
+            return AV_CODEC_ID_VP8;
+        case webrtc::kVideoCodecVP9:
+            return AV_CODEC_ID_VP9;
+        case webrtc::kVideoCodecH264:
+            return AV_CODEC_ID_H264;
+        case webrtc::kVideoCodecH265:
+            return AV_CODEC_ID_HEVC;
+        default:
+            return AV_CODEC_ID_NONE;
+    }
+}
+
+webrtc::VideoCodecType FFMpegDecoder::findCodecType(std::string name) {
+    if (name == cricket::kVp8CodecName) {
+        return webrtc::kVideoCodecVP8;
+    } else if (name == cricket::kVp9CodecName) {
+        return webrtc::kVideoCodecVP9;
+    } else if (name == cricket::kH264CodecName) {
+        return webrtc::kVideoCodecH264;
+    } else if (name == cricket::kH265CodecName) {
+        return webrtc::kVideoCodecH265;
+    } else {
+        return webrtc::kVideoCodecGeneric;
+    }
 }
 

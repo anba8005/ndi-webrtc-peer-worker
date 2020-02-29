@@ -38,16 +38,14 @@ std::vector<webrtc::SdpVideoFormat> SoftwareDecoderFactory::GetSupportedFormats(
 }
 
 std::unique_ptr<webrtc::VideoDecoder> SoftwareDecoderFactory::CreateVideoDecoder(const webrtc::SdpVideoFormat &format) {
-    std::cerr << "CREATE DECODER " << format.name << std::endl;
     if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
         return webrtc::VP8Decoder::Create();
     if (absl::EqualsIgnoreCase(format.name, cricket::kVp9CodecName))
         return webrtc::VP9Decoder::Create();
     if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName))
         return webrtc::H264Decoder::Create();
-    if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName)) {
-        return FFMpegDecoder::Create();
-    }
+    if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName))
+        return FFMpegDecoder::Create(cricket::kH265CodecName);
     return nullptr;
 }
 
