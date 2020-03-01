@@ -10,6 +10,7 @@
 #include "api/video_codecs/builtin_video_encoder_factory.h"
 #include "media/base/media_constants.h"
 #include "absl/strings/match.h"
+#include "FFmpegVideoEncoder.h"
 
 #include <iostream>
 
@@ -20,16 +21,15 @@ SoftwareEncoderFactory::~SoftwareEncoderFactory() {
 }
 
 std::unique_ptr<webrtc::VideoEncoder> SoftwareEncoderFactory::CreateVideoEncoder(const webrtc::SdpVideoFormat &format) {
-    std::cerr << "CREATE ENCODER " <<  format.name << std::endl;
+    std::cerr << "CREATE ENCODER " << format.name << std::endl;
     if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
         return webrtc::VP8Encoder::Create();
     if (absl::EqualsIgnoreCase(format.name, cricket::kVp9CodecName))
         return webrtc::VP9Encoder::Create(cricket::VideoCodec(format));
     if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName))
-        return webrtc::H264Encoder::Create(cricket::VideoCodec(format));
-//    if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName)) {
-//        return H265Encoder::Create();
-//    }
+        return FFmpegVideoEncoder::Create(cricket::kH264CodecName);
+    if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName))
+        return FFmpegVideoEncoder::Create(cricket::kH265CodecName);
     return nullptr;
 }
 

@@ -5,17 +5,36 @@
 #ifndef NDI_WEBRTC_PEER_WORKER_FFMPEGVIDEOENCODER_H
 #define NDI_WEBRTC_PEER_WORKER_FFMPEGVIDEOENCODER_H
 
+#define OWT_ENABLE_H265
+
+extern "C" {
+#include "libavcodec/avcodec.h"
+#include "libavutil/hwcontext.h"
+}
+
 #include "media/base/codec.h"
 #include "modules/video_coding/include/video_codec_interface.h"
 #include "rtc_base/system/rtc_export.h"
 
+struct AVCodecContextDeleter {
+    void operator()(AVCodecContext *ptr) const { avcodec_free_context(&ptr); }
+};
+
+struct AVFrameDeleter {
+    void operator()(AVFrame *ptr) const { av_frame_free(&ptr); }
+};
+
+struct AVBufferDeleter {
+    void operator()(AVBufferRef *ptr) const { av_buffer_unref(&ptr); }
+};
+
 class RTC_EXPORT FFmpegVideoEncoder : public webrtc::VideoEncoder {
 public:
-    explicit FFmpegVideoEncoder();
+    explicit FFmpegVideoEncoder(std::string codec_name);
 
-    virtual ~FFmpegVideoEncoder();
+    virtual ~FFmpegVideoEncoder() override;
 
-    static std::unique_ptr<FFmpegVideoEncoder> Create(cricket::VideoCodec format);
+    static std::unique_ptr<FFmpegVideoEncoder> Create(std::string codec_name);
 
     int InitEncode(const webrtc::VideoCodec *codec_settings, int number_of_cores, size_t max_payload_size) override;
 
@@ -34,6 +53,35 @@ public:
     EncoderInfo GetEncoderInfo() const override;
 
     int Release() override;
+
+
+private:
+    webrtc::VideoCodecType codec_type_;
+    std::unique_ptr<AVCodecContext, AVCodecContextDeleter> av_context_;
+    std::unique_ptr<AVFrame, AVFrameDeleter> av_frame_;
+    std::unique_ptr<AVBufferRef, AVBufferDeleter> hw_context_;
+    webrtc::EncodedImageCallback *encoded_image_callback_;
+    int width_;
+    int height_;
+
+    bool IsInitialized() const;
+
+    AVHWDeviceType findHWDeviceType(const char *name);
+
+    bool createHWContext(AVHWDeviceType type);
+
+    const char *findEncoderName(webrtc::VideoCodecType codec_type, AVHWDeviceType device_type);
+
+    webrtc::VideoCodecType findCodecType(std::string name);
+
+    int setHWFrameContext(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int width, int height);
+
+    int32_t NextNaluPosition(uint8_t *buffer, size_t buffer_size, uint8_t *sc_length);
+
+    int getCodecProfile();
+
+    int getCodecLevel();
+
 };
 
 

@@ -30,7 +30,7 @@ VideoDeviceModule::feedFrame(int width, int height, const uint8_t *data, const i
 	                         &crop_x,
 	                         &crop_y);
 	if (!result) {
-		std::cerr << "skip frame" << std::endl;
+//		std::cerr << "skip frame" << std::endl;
 		return;
 	}
 
