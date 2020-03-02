@@ -19,9 +19,9 @@ NDIReader::~NDIReader() {
 }
 
 void NDIReader::open(Configuration config) {
-	//
-	this->maxWidth = config.maxWidth;
-	this->maxHeight = config.maxHeight;
+    //
+    this->maxWidth = config.maxWidth;
+    this->maxHeight = config.maxHeight;
 
     // Create the descriptor of the object to create
     NDIlib_find_create_t find_create;
@@ -36,37 +36,37 @@ void NDIReader::open(Configuration config) {
 
 
     // Find source
-	std::cerr << "Looking for sources ..." << std::endl;
+    std::cerr << "Looking for sources ..." << std::endl;
     uint32_t no_sources = 0;
-	NDIlib_source_t _ndi_source;
-	bool found = false;
-	uint32_t cycles = 0;
-	while (cycles < 30) { // 6 sec max
-		if (NDIlib_find_wait_for_sources(pNDI_find, 200)) {
-			// get available sources
-			const NDIlib_source_t *p_sources = NDIlib_find_get_current_sources(pNDI_find, &no_sources);
-			// find target source
-			for (uint32_t i = 0; i < no_sources; i++) {
-				if (config.name == std::string(p_sources[i].p_ndi_name)) {
-					// found
-					_ndi_source = p_sources[i];
-					found = true;
-					break;
-				}
-			}
-			// proceed if source found
-			if (found) {
-				break;
-			}
-		} else {
-			// show progress
-			if (cycles > 0 && cycles % 5 == 0) {
-				std::cerr << "." << std::endl;
-			}
-		}
-		//
-		cycles++;
-	}
+    NDIlib_source_t _ndi_source;
+    bool found = false;
+    uint32_t cycles = 0;
+    while (cycles < 30) { // 6 sec max
+        if (NDIlib_find_wait_for_sources(pNDI_find, 200)) {
+            // get available sources
+            const NDIlib_source_t *p_sources = NDIlib_find_get_current_sources(pNDI_find, &no_sources);
+            // find target source
+            for (uint32_t i = 0; i < no_sources; i++) {
+                if (config.name == std::string(p_sources[i].p_ndi_name)) {
+                    // found
+                    _ndi_source = p_sources[i];
+                    found = true;
+                    break;
+                }
+            }
+            // proceed if source found
+            if (found) {
+                break;
+            }
+        } else {
+            // show progress
+            if (cycles > 0 && cycles % 5 == 0) {
+                std::cerr << "." << std::endl;
+            }
+        }
+        //
+        cycles++;
+    }
 
     // check if desired source available
     if (!found) {
@@ -133,9 +133,13 @@ void NDIReader::run() {
                 // Video data
             case NDIlib_frame_type_video:
                 // send
-                if (vdm)
+                if (vdm) {
+                    //
+                    vdm->updateFrameRate(video_frame.frame_rate_N,video_frame.frame_rate_D);
+                    //
                     vdm->feedFrame(video_frame.xres, video_frame.yres, video_frame.p_data,
                                    video_frame.line_stride_in_bytes, video_frame.timestamp, maxWidth, maxHeight);
+                }
                 // free
                 NDIlib_recv_free_video_v2(_pNDI_recv, &video_frame);
                 break;
@@ -180,52 +184,52 @@ void NDIReader::run() {
 }
 
 json NDIReader::findSources() {
-	// Create the descriptor of the object to create
-	NDIlib_find_create_t find_create;
-	find_create.show_local_sources = true;
-	find_create.p_groups = nullptr;
-	find_create.p_extra_ips = nullptr;
+    // Create the descriptor of the object to create
+    NDIlib_find_create_t find_create;
+    find_create.show_local_sources = true;
+    find_create.p_groups = nullptr;
+    find_create.p_extra_ips = nullptr;
 
-	// Create a finder
-	NDIlib_find_instance_t pNDI_find = NDIlib_find_create_v2(&find_create);
-	if (!pNDI_find)
-		throw std::runtime_error("Cannot create NDI finder");
+    // Create a finder
+    NDIlib_find_instance_t pNDI_find = NDIlib_find_create_v2(&find_create);
+    if (!pNDI_find)
+        throw std::runtime_error("Cannot create NDI finder");
 
-	// Wait until there is one source
-	uint32_t no_sources = 0;
-	const NDIlib_source_t *p_sources = nullptr;
-	std::cerr << "Looking for sources ..." << std::endl;
-	uint32_t cycles = 0;
-	while (cycles < 30) { // 6 sec max
-		if (NDIlib_find_wait_for_sources(pNDI_find, 200)) {
-			p_sources = NDIlib_find_get_current_sources(pNDI_find, &no_sources);
-		} else {
-			if (no_sources > 0) {
-				// break if some sources found and no sources again
-				break;
-			} else if (cycles > 0 && cycles % 5 == 0) {
-				std::cerr << "." << std::endl;
-			}
-		}
-		//
-		cycles++;
-	}
-	std::cerr << "Network sources (" << no_sources << " found)" << std::endl;
+    // Wait until there is one source
+    uint32_t no_sources = 0;
+    const NDIlib_source_t *p_sources = nullptr;
+    std::cerr << "Looking for sources ..." << std::endl;
+    uint32_t cycles = 0;
+    while (cycles < 30) { // 6 sec max
+        if (NDIlib_find_wait_for_sources(pNDI_find, 200)) {
+            p_sources = NDIlib_find_get_current_sources(pNDI_find, &no_sources);
+        } else {
+            if (no_sources > 0) {
+                // break if some sources found and no sources again
+                break;
+            } else if (cycles > 0 && cycles % 5 == 0) {
+                std::cerr << "." << std::endl;
+            }
+        }
+        //
+        cycles++;
+    }
+    std::cerr << "Network sources (" << no_sources << " found)" << std::endl;
 
-	// create result
-	json result = json::array();
-	for (uint32_t i = 0; i < no_sources; i++) {
-		//std::cerr << i + 1 << " " << p_sources[i].p_ndi_name << " " << p_sources[i].p_ip_address << std::endl;
-		json source;
-		source["name"] = p_sources[i].p_ndi_name;
-		source["ip"] = p_sources[i].p_ip_address;
-		result.push_back(source);
-	}
+    // create result
+    json result = json::array();
+    for (uint32_t i = 0; i < no_sources; i++) {
+        //std::cerr << i + 1 << " " << p_sources[i].p_ndi_name << " " << p_sources[i].p_ip_address << std::endl;
+        json source;
+        source["name"] = p_sources[i].p_ndi_name;
+        source["ip"] = p_sources[i].p_ip_address;
+        result.push_back(source);
+    }
 
-	// cleanup
-	NDIlib_find_destroy(pNDI_find);
+    // cleanup
+    NDIlib_find_destroy(pNDI_find);
 
-	return result;
+    return result;
 }
 
 NDIReader::Configuration::Configuration(json payload) {
@@ -233,9 +237,9 @@ NDIReader::Configuration::Configuration(json payload) {
     if (name.empty())
         throw std::runtime_error("NDI Source name is empty");
     this->ips = payload.value("ips", "");
-    this->maxWidth = payload.value("width",0);
-    this->maxHeight = payload.value("height",0);
-    this->lowBandwidth = payload.value("lowBandwidth",false);
+    this->maxWidth = payload.value("width", 0);
+    this->maxHeight = payload.value("height", 0);
+    this->lowBandwidth = payload.value("lowBandwidth", false);
 
 
 }

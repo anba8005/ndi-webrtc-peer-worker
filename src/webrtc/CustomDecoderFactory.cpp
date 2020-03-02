@@ -4,7 +4,7 @@
 
 #define OWT_ENABLE_H265
 
-#include "SoftwareDecoderFactory.h"
+#include "CustomDecoderFactory.h"
 #include "CodecUtils.h"
 #include "FFmpegVideoDecoder.h"
 #include "api/video_codecs/builtin_video_decoder_factory.h"
@@ -16,14 +16,14 @@
 
 #include <iostream>
 
-SoftwareDecoderFactory::SoftwareDecoderFactory() {
+CustomDecoderFactory::CustomDecoderFactory() {
 }
 
 
-SoftwareDecoderFactory::~SoftwareDecoderFactory() {
+CustomDecoderFactory::~CustomDecoderFactory() {
 }
 
-std::vector<webrtc::SdpVideoFormat> SoftwareDecoderFactory::GetSupportedFormats() const {
+std::vector<webrtc::SdpVideoFormat> CustomDecoderFactory::GetSupportedFormats() const {
     std::vector<webrtc::SdpVideoFormat> supported_codecs;
     supported_codecs.push_back(webrtc::SdpVideoFormat(cricket::kVp8CodecName));
     for (const webrtc::SdpVideoFormat &format : webrtc::SupportedVP9Codecs())
@@ -37,7 +37,7 @@ std::vector<webrtc::SdpVideoFormat> SoftwareDecoderFactory::GetSupportedFormats(
     return supported_codecs;
 }
 
-std::unique_ptr<webrtc::VideoDecoder> SoftwareDecoderFactory::CreateVideoDecoder(const webrtc::SdpVideoFormat &format) {
+std::unique_ptr<webrtc::VideoDecoder> CustomDecoderFactory::CreateVideoDecoder(const webrtc::SdpVideoFormat &format) {
     if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
         return webrtc::VP8Decoder::Create();
     if (absl::EqualsIgnoreCase(format.name, cricket::kVp9CodecName))
@@ -53,7 +53,7 @@ std::unique_ptr<webrtc::VideoDecoder> SoftwareDecoderFactory::CreateVideoDecoder
 //
 //
 
-std::unique_ptr<webrtc::VideoDecoderFactory> SoftwareDecoderFactory::Create() {
-    return absl::make_unique<SoftwareDecoderFactory>();
+std::unique_ptr< CustomDecoderFactory> CustomDecoderFactory::Create() {
+    return absl::make_unique<CustomDecoderFactory>();
 }
 

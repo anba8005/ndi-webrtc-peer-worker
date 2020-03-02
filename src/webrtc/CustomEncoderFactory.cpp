@@ -2,7 +2,7 @@
 // Created by anba8005 on 26/02/2020.
 //
 
-#include "SoftwareEncoderFactory.h"
+#include "CustomEncoderFactory.h"
 #include "CodecUtils.h"
 #include "modules/video_coding/codecs/h264/include/h264.h"
 #include "modules/video_coding/codecs/vp8/include/vp8.h"
@@ -14,26 +14,27 @@
 
 #include <iostream>
 
-SoftwareEncoderFactory::SoftwareEncoderFactory() {
+CustomEncoderFactory::CustomEncoderFactory() : frame_rate(0) {
 }
 
-SoftwareEncoderFactory::~SoftwareEncoderFactory() {
+CustomEncoderFactory::~CustomEncoderFactory() {
 }
 
-std::unique_ptr<webrtc::VideoEncoder> SoftwareEncoderFactory::CreateVideoEncoder(const webrtc::SdpVideoFormat &format) {
+std::unique_ptr<webrtc::VideoEncoder> CustomEncoderFactory::CreateVideoEncoder(const webrtc::SdpVideoFormat &format) {
     std::cerr << "CREATE ENCODER " << format.name << std::endl;
     if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
         return webrtc::VP8Encoder::Create();
     if (absl::EqualsIgnoreCase(format.name, cricket::kVp9CodecName))
         return webrtc::VP9Encoder::Create(cricket::VideoCodec(format));
     if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName))
-        return FFmpegVideoEncoder::Create(cricket::kH264CodecName);
+        return FFmpegVideoEncoder::Create(cricket::VideoCodec(format), frame_rate);
+//        return webrtc::H264Encoder::Create(cricket::VideoCodec(format));
     if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName))
-        return FFmpegVideoEncoder::Create(cricket::kH265CodecName);
+        return FFmpegVideoEncoder::Create(cricket::VideoCodec(format), frame_rate);
     return nullptr;
 }
 
-std::vector<webrtc::SdpVideoFormat> SoftwareEncoderFactory::GetSupportedFormats() const {
+std::vector<webrtc::SdpVideoFormat> CustomEncoderFactory::GetSupportedFormats() const {
     std::vector<webrtc::SdpVideoFormat> supported_codecs;
     supported_codecs.push_back(webrtc::SdpVideoFormat(cricket::kVp8CodecName));
     for (const webrtc::SdpVideoFormat &format : webrtc::SupportedVP9Codecs())
@@ -48,14 +49,18 @@ std::vector<webrtc::SdpVideoFormat> SoftwareEncoderFactory::GetSupportedFormats(
 }
 
 webrtc::VideoEncoderFactory::CodecInfo
-SoftwareEncoderFactory::QueryVideoEncoder(const webrtc::SdpVideoFormat &format) const {
+CustomEncoderFactory::QueryVideoEncoder(const webrtc::SdpVideoFormat &format) const {
     webrtc::VideoEncoderFactory::CodecInfo info;
     info.is_hardware_accelerated = false;
     info.has_internal_source = false;
     return info;
 }
 
-std::unique_ptr<webrtc::VideoEncoderFactory> SoftwareEncoderFactory::Create() {
-    return absl::make_unique<SoftwareEncoderFactory>();
+std::unique_ptr<CustomEncoderFactory> CustomEncoderFactory::Create() {
+    return absl::make_unique<CustomEncoderFactory>();
+}
+
+void CustomEncoderFactory::updateFrameRate(int num, int den) {
+    frame_rate = av_q2d({ num, den});
 }
 

@@ -16,8 +16,8 @@
 #include "pc/peer_connection.h"
 #include "system_wrappers/include/field_trial.h"
 
-#include "webrtc/SoftwareDecoderFactory.h"
-#include "webrtc/SoftwareEncoderFactory.h"
+#include "webrtc/CustomDecoderFactory.h"
+#include "webrtc/CustomEncoderFactory.h"
 
 #include <memory>
 #include <iostream>
@@ -46,12 +46,18 @@ PeerFactoryContext::PeerFactoryContext() {
                  return VideoDeviceModule::Create();
              });
 
+    // create encoder factory
+    auto encoderFactory = CustomEncoderFactory::Create();
+    vdm->setFrameRateUpdater(encoderFactory.get());
+
+    // create decoder factory
+    auto decoderFactory = CustomDecoderFactory::Create();
+
     // Create the factory
     factory = webrtc::CreatePeerConnectionFactory(
             networkThread.get(), workerThread.get(), rtc::Thread::Current(),
             adm, webrtc::CreateBuiltinAudioEncoderFactory(), webrtc::CreateBuiltinAudioDecoderFactory(),
-//            webrtc::CreateBuiltinVideoEncoderFactory(), webrtc::CreateBuiltinVideoDecoderFactory(), nullptr, nullptr);
-    SoftwareEncoderFactory::Create(), SoftwareDecoderFactory::Create(), nullptr, nullptr);
+            std::move(encoderFactory), std::move(decoderFactory), nullptr, nullptr);
 
     // validate
     if (!factory)
@@ -63,7 +69,7 @@ PeerFactoryContext::PeerFactoryContext() {
 }
 
 PeerFactoryContext::~PeerFactoryContext() {
-	factory.release();
+    factory.release();
 }
 
 void
@@ -71,28 +77,28 @@ PeerFactoryContext::setConfiguration(json configuration) {
     //
     json iceServers = configuration["iceServers"];
     if (iceServers != nullptr && iceServers.is_array()) {
-        for (auto& iceServer : iceServers) {
+        for (auto &iceServer : iceServers) {
             webrtc::PeerConnectionInterface::IceServer srv;
             //
             json urls = iceServer["urls"];
             if (urls.is_array()) {
-                for (auto& url : urls) {
+                for (auto &url : urls) {
                     srv.urls.push_back(url.get<std::string>());
                 }
-            } else if (urls.is_string()){
+            } else if (urls.is_string()) {
                 srv.urls.push_back(urls.get<std::string>());
             } else {
                 std::cerr << "invalid iceServer urls" << urls;
             }
             //
-            srv.username = iceServer.value("username","");
-            srv.password = iceServer.value("credential","");
+            srv.username = iceServer.value("username", "");
+            srv.password = iceServer.value("credential", "");
             //
             config.servers.push_back(srv);
         }
     }
     //
-    config.set_cpu_adaptation(configuration.value("cpuAdaptation",true));
+    config.set_cpu_adaptation(configuration.value("cpuAdaptation", true));
 }
 
 BaseAudioDeviceModule *PeerFactoryContext::getADM() {

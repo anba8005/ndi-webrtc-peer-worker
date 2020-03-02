@@ -9,18 +9,23 @@
 
 #define MAX_NALUS_PERFRAME 32
 #define NAL_SC_LENGTH 4
+#define DEFAULT_FPS (AVRational) {25, 1}
 
-FFmpegVideoEncoder::FFmpegVideoEncoder(std::string codec_name) : encoded_image_callback_(nullptr), width_(0),
-                                                                 height_(0) {
-    codec_type_ = findCodecType(codec_name);
+FFmpegVideoEncoder::FFmpegVideoEncoder(const cricket::VideoCodec &codec, double frame_rate) : encoded_image_callback_(
+        nullptr),
+                                                                                              width_(0),
+                                                                                              height_(0),
+                                                                                              frame_rate_(frame_rate) {
+    codec_type_ = findCodecType(codec.name);
+    coder_profile_level_ = webrtc::H264::ParseSdpProfileLevelId(codec.params);
 }
 
 FFmpegVideoEncoder::~FFmpegVideoEncoder() {
     Release();
 }
 
-std::unique_ptr<FFmpegVideoEncoder> FFmpegVideoEncoder::Create(std::string codec_name) {
-    return absl::make_unique<FFmpegVideoEncoder>(codec_name);
+std::unique_ptr<FFmpegVideoEncoder> FFmpegVideoEncoder::Create(const cricket::VideoCodec &codec, double frame_rate) {
+    return absl::make_unique<FFmpegVideoEncoder>(codec, frame_rate);
 }
 
 int
@@ -74,13 +79,13 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
     av_context_->time_base = (AVRational) {1, 90000};
     av_context_->sample_aspect_ratio = (AVRational) {1, 1};
     av_context_->pix_fmt = AV_PIX_FMT_VAAPI;
-
     // fill configuration
+    AVRational fps = frame_rate_ > 0 ? av_d2q(frame_rate_, 65535) : DEFAULT_FPS;
+    av_context_->framerate = fps;
     av_context_->max_b_frames = 0;
-    av_context_->bit_rate = codec_settings->maxBitrate * 1024L * 1024L;
-    //
+    av_context_->gop_size = 100;
+    av_context_->bit_rate = codec_settings->maxBitrate * 1000;
     AVDictionary *opts = NULL;
-    av_dict_set_int(&opts, "g", 100, 0);
     av_dict_set(&opts, "rc_mode", "CBR", 0);
     //
     int profile = getCodecProfile();
@@ -217,8 +222,6 @@ FFmpegVideoEncoder::Encode(const webrtc::VideoFrame &input_image,
         encodedFrame.SetTimestamp(packet.pts);
         encodedFrame._frameType = (packet.flags & AV_PKT_FLAG_KEY) ? webrtc::VideoFrameType::kVideoFrameKey
                                                                    : webrtc::VideoFrameType::kVideoFrameDelta;
-//        RTC_LOG(LS_ERROR) << packet.flags;
-
         //
         webrtc::CodecSpecificInfo info;
         memset(&info, 0, sizeof(info));
@@ -440,7 +443,21 @@ int32_t FFmpegVideoEncoder::NextNaluPosition(uint8_t *buffer, size_t buffer_size
 
 int FFmpegVideoEncoder::getCodecProfile() {
     if (codec_type_ == webrtc::kVideoCodecH264) {
-        return FF_PROFILE_H264_CONSTRAINED_BASELINE; // TODO BY SDP
+        if (coder_profile_level_.has_value()) {
+            switch (coder_profile_level_->profile) {
+                case webrtc::H264::kProfileConstrainedHigh:
+                    return FF_PROFILE_H264_CONSTRAINED | FF_PROFILE_H264_HIGH;
+                case webrtc::H264::kProfileHigh:
+                    return FF_PROFILE_H264_HIGH;
+                case webrtc::H264::kProfileBaseline:
+                case webrtc::H264::kProfileConstrainedBaseline:
+                    return FF_PROFILE_H264_CONSTRAINED_BASELINE;
+                case webrtc::H264::kProfileMain:
+                    return FF_PROFILE_H264_MAIN;
+            }
+        } else {
+            return FF_PROFILE_H264_CONSTRAINED_BASELINE; // DEFAULT
+        }
     } else if (codec_type_ == webrtc::kVideoCodecH265) {
         return FF_PROFILE_HEVC_MAIN;
     } else {
@@ -450,7 +467,11 @@ int FFmpegVideoEncoder::getCodecProfile() {
 
 int FFmpegVideoEncoder::getCodecLevel() {
     if (codec_type_ == webrtc::kVideoCodecH264) {
-        return 31; // TODO find by sdp
+        if (coder_profile_level_.has_value()) {
+            return coder_profile_level_->level;
+        } else {
+            return 31; // DEFAULT
+        }
     } else if (codec_type_ == webrtc::kVideoCodecH265) {
         return 120;
     } else {

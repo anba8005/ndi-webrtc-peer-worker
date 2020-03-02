@@ -15,6 +15,7 @@ extern "C" {
 #include "media/base/codec.h"
 #include "modules/video_coding/include/video_codec_interface.h"
 #include "rtc_base/system/rtc_export.h"
+#include "media/base/h264_profile_level_id.h"
 
 struct AVCodecContextDeleter {
     void operator()(AVCodecContext *ptr) const { avcodec_free_context(&ptr); }
@@ -30,11 +31,11 @@ struct AVBufferDeleter {
 
 class RTC_EXPORT FFmpegVideoEncoder : public webrtc::VideoEncoder {
 public:
-    explicit FFmpegVideoEncoder(std::string codec_name);
+    explicit FFmpegVideoEncoder(const cricket::VideoCodec &codec, double frame_rate);
 
     virtual ~FFmpegVideoEncoder() override;
 
-    static std::unique_ptr<FFmpegVideoEncoder> Create(std::string codec_name);
+    static std::unique_ptr<FFmpegVideoEncoder> Create(const cricket::VideoCodec &codec, double frame_rate);
 
     int InitEncode(const webrtc::VideoCodec *codec_settings, int number_of_cores, size_t max_payload_size) override;
 
@@ -57,12 +58,14 @@ public:
 
 private:
     webrtc::VideoCodecType codec_type_;
+    absl::optional<webrtc::H264::ProfileLevelId> coder_profile_level_;
     std::unique_ptr<AVCodecContext, AVCodecContextDeleter> av_context_;
     std::unique_ptr<AVFrame, AVFrameDeleter> av_frame_;
     std::unique_ptr<AVBufferRef, AVBufferDeleter> hw_context_;
     webrtc::EncodedImageCallback *encoded_image_callback_;
     int width_;
     int height_;
+    double frame_rate_;
 
     bool IsInitialized() const;
 

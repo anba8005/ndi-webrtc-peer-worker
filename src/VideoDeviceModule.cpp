@@ -7,7 +7,7 @@
 #include <rtc_base/ref_counted_object.h>
 #include "third_party/libyuv/include/libyuv.h"
 
-VideoDeviceModule::VideoDeviceModule() : AdaptedVideoTrackSource() {
+VideoDeviceModule::VideoDeviceModule() : AdaptedVideoTrackSource(), _updater(nullptr) {
 }
 
 VideoDeviceModule::~VideoDeviceModule() {
@@ -30,7 +30,7 @@ VideoDeviceModule::feedFrame(int width, int height, const uint8_t *data, const i
 	                         &crop_x,
 	                         &crop_y);
 	if (!result) {
-//		std::cerr << "skip frame" << std::endl;
+		std::cerr << "skip frame" << std::endl;
 		return;
 	}
 
@@ -73,6 +73,16 @@ bool VideoDeviceModule::remote() const {
 
 rtc::scoped_refptr<VideoDeviceModule> VideoDeviceModule::Create() {
 	return new rtc::RefCountedObject<VideoDeviceModule>();
+}
+
+void VideoDeviceModule::updateFrameRate(int num, int den) {
+    if (_updater) {
+        _updater->updateFrameRate(num,den);
+    }
+}
+
+void VideoDeviceModule::setFrameRateUpdater(FrameRateUpdater *updater) {
+    _updater = updater;
 }
 
 

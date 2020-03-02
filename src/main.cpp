@@ -14,6 +14,7 @@
 using namespace std;
 
 int main(int argc, char **argv) {
+//    av_log_set_level(AV_LOG_VERBOSE);
     rtc::LogMessage::LogToDebug(rtc::LS_ERROR);
     rtc::LogMessage::LogTimestamps();
     rtc::LogMessage::LogThreads();

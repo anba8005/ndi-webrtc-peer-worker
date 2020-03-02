@@ -16,6 +16,7 @@
 
 #include "media/base/adapted_video_track_source.h"
 #include "api/video/i420_buffer.h"
+#include "webrtc/CustomEncoderFactory.h"
 
 #include <thread>
 #include <atomic>
@@ -41,6 +42,11 @@ public:
 	void feedFrame(int width, int height, const uint8_t *data, const int linesize, int64_t timestamp,
 	               int maxWidth, int maxHeight);
 
+	void updateFrameRate(int num, int den);
+
+	void setFrameRateUpdater(FrameRateUpdater* updater);
+private:
+    FrameRateUpdater* _updater;
 };
 
 
