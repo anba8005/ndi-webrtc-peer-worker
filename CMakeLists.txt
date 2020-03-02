@@ -51,6 +51,8 @@ ELSE()
 	#
 ENDIF()
 
+add_definitions(-DOWT_ENABLE_H265)
+
 add_executable(
 		ndi-webrtc-peer-worker
 		src/main.cpp
@@ -64,7 +66,15 @@ add_executable(
 		src/BaseAudioDeviceModule.cpp src/BaseAudioDeviceModule.h
 		src/AudioBuffer.cpp src/AudioBuffer.h
 		src/VideoDeviceModule.cpp src/VideoDeviceModule.h
-		src/NDIReader.cpp src/NDIReader.h src/StatsCollectorCallback.cpp src/StatsCollectorCallback.h src/StatsObserver.cpp src/StatsObserver.h src/webrtc/CustomDecoderFactory.cpp src/webrtc/CustomDecoderFactory.h src/webrtc/CustomEncoderFactory.cpp src/webrtc/CustomEncoderFactory.h src/webrtc/CodecUtils.cpp src/webrtc/CodecUtils.h src/webrtc/H265Decoder.cpp src/webrtc/H265Decoder.h src/webrtc/FFmpegVideoDecoder.cpp src/webrtc/FFmpegVideoDecoder.h src/webrtc/FFmpegVideoEncoder.cpp src/webrtc/FFmpegVideoEncoder.h)
+		src/NDIReader.cpp src/NDIReader.h
+		src/StatsCollectorCallback.cpp src/StatsCollectorCallback.h
+		src/StatsObserver.cpp src/StatsObserver.h
+		src/webrtc/CustomDecoderFactory.cpp src/webrtc/CustomDecoderFactory.h
+		src/webrtc/CustomEncoderFactory.cpp src/webrtc/CustomEncoderFactory.h
+		src/webrtc/CodecUtils.cpp src/webrtc/CodecUtils.h
+		src/webrtc/FFmpegVideoDecoder.cpp src/webrtc/FFmpegVideoDecoder.h
+		src/webrtc/FFmpegVideoEncoder.cpp src/webrtc/FFmpegVideoEncoder.h
+		src/webrtc/FrameRateUpdater.h)
 
 target_compile_options(ndi-webrtc-peer-worker PUBLIC ${COMPILE_OPTIONS})
 set_target_properties(ndi-webrtc-peer-worker PROPERTIES LINK_FLAGS_RELEASE -s)

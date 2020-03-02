@@ -34,9 +34,17 @@ const size_t kYPlaneIndex = 0;
 const size_t kUPlaneIndex = 1;
 const size_t kVPlaneIndex = 2;
 
-FFmpegVideoDecoder::FFmpegVideoDecoder(std::string codec_name) : pool_(true), decoded_image_callback_(nullptr),
-                                                                 packet_data_(nullptr), packet_data_size_(0),
-                                                                 hw_pixel_format_(AV_PIX_FMT_NONE) {
+FFmpegVideoDecoder::FFmpegVideoDecoder(std::string codec_name, CodecUtils::HardwareType hardware_type) : pool_(true),
+                                                                                                         decoded_image_callback_(
+                                                                                                                 nullptr),
+                                                                                                         packet_data_(
+                                                                                                                 nullptr),
+                                                                                                         packet_data_size_(
+                                                                                                                 0),
+                                                                                                         hardware_type_(
+                                                                                                                 hardware_type),
+                                                                                                         hw_pixel_format_(
+                                                                                                                 AV_PIX_FMT_NONE) {
     codec_type_ = findCodecType(codec_name);
 }
 
@@ -57,7 +65,11 @@ int32_t FFmpegVideoDecoder::InitDecode(const webrtc::VideoCodec *codec_settings,
     RTC_DCHECK(!av_context_);
 
     // get HW device type
-    AVHWDeviceType type = findHWDeviceType("vaapi");
+    AVHWDeviceType type = AV_HWDEVICE_TYPE_NONE;
+    if (hardware_type_ != CodecUtils::HW_TYPE_NONE) {
+        auto hardware_type_str = CodecUtils::ConvertHardwareTypeToString(hardware_type_);
+        type = findHWDeviceType(hardware_type_str.c_str());
+    }
 
     // Initialize AVCodecContext.
     av_context_.reset(avcodec_alloc_context3(nullptr));
@@ -237,8 +249,9 @@ bool FFmpegVideoDecoder::IsSupported() {
     return true;
 }
 
-std::unique_ptr<FFmpegVideoDecoder> FFmpegVideoDecoder::Create(std::string codec_name) {
-    return absl::make_unique<FFmpegVideoDecoder>(codec_name);
+std::unique_ptr<FFmpegVideoDecoder>
+FFmpegVideoDecoder::Create(std::string codec_name, CodecUtils::HardwareType hardware_type) {
+    return absl::make_unique<FFmpegVideoDecoder>(codec_name, hardware_type);
 }
 
 bool FFmpegVideoDecoder::createHWContext(AVHWDeviceType type) {

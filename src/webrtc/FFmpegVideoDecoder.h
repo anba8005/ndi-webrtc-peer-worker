@@ -15,13 +15,12 @@
 #ifndef NDI_WEBRTC_PEER_WORKER_FFMPEGVIDEODECODER_H
 #define NDI_WEBRTC_PEER_WORKER_FFMPEGVIDEODECODER_H
 
-#define OWT_ENABLE_H265
-
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavutil/hwcontext.h"
 }
 
+#include "CodecUtils.h"
 #include "media/base/codec.h"
 #include "modules/video_coding/include/video_codec_interface.h"
 #include "common_video/include/i420_buffer_pool.h"
@@ -42,7 +41,7 @@ struct AVBufferDeleter {
 
 class RTC_EXPORT FFmpegVideoDecoder : public webrtc::VideoDecoder {
 public:
-    explicit FFmpegVideoDecoder(std::string codec_name);
+    explicit FFmpegVideoDecoder(std::string codec_name, CodecUtils::HardwareType hardware_type);
 
     ~FFmpegVideoDecoder() override;
 
@@ -60,7 +59,7 @@ public:
 
     static bool IsSupported();
 
-    static std::unique_ptr<FFmpegVideoDecoder> Create(std::string codec_name);
+    static std::unique_ptr<FFmpegVideoDecoder> Create(std::string codec_name, CodecUtils::HardwareType hardware_type);
 
 private:
     bool IsInitialized() const;
@@ -72,6 +71,7 @@ private:
     webrtc::VideoCodecType findCodecType(std::string name);
 
     webrtc::VideoCodecType codec_type_;
+    CodecUtils::HardwareType hardware_type_;
     webrtc::I420BufferPool pool_;
     std::unique_ptr<AVCodecContext, AVCodecContextDeleter> av_context_;
     std::unique_ptr<AVFrame, AVFrameDeleter> av_frame_;

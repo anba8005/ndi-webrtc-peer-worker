@@ -9,7 +9,6 @@
 #include "absl/types/optional.h"
 #include "media/base/media_constants.h"
 
-
 webrtc::SdpVideoFormat CodecUtils::CreateH264Format(webrtc::H264::Profile profile,
                                                     webrtc::H264::Level level,
                                                     const std::string &packetization_mode) {
@@ -48,5 +47,22 @@ webrtc::VideoCodecType CodecUtils::ConvertSdpFormatToCodecType(webrtc::SdpVideoF
         return webrtc::kVideoCodecH265;
     } else {
         return webrtc::kVideoCodecGeneric;
+    }
+}
+
+CodecUtils::HardwareType CodecUtils::ParseHardwareType(std::string type) {
+    if (type == "vaapi") {
+        return HW_TYPE_VAAPI;
+    } else {
+        return HW_TYPE_NONE;
+    }
+}
+
+std::string CodecUtils::ConvertHardwareTypeToString(CodecUtils::HardwareType type) {
+    switch (type) {
+        case HW_TYPE_VAAPI:
+            return "vaapi";
+        default:
+            return "none";
     }
 }

@@ -3,34 +3,35 @@
 //
 
 #include "CustomEncoderFactory.h"
-#include "CodecUtils.h"
 #include "modules/video_coding/codecs/h264/include/h264.h"
 #include "modules/video_coding/codecs/vp8/include/vp8.h"
 #include "modules/video_coding/codecs/vp9/include/vp9.h"
-#include "api/video_codecs/builtin_video_encoder_factory.h"
 #include "media/base/media_constants.h"
 #include "absl/strings/match.h"
 #include "FFmpegVideoEncoder.h"
 
 #include <iostream>
 
-CustomEncoderFactory::CustomEncoderFactory() : frame_rate(0) {
+CustomEncoderFactory::CustomEncoderFactory() : frame_rate(0), hardware_type_(CodecUtils::HW_TYPE_NONE) {
 }
 
 CustomEncoderFactory::~CustomEncoderFactory() {
 }
 
 std::unique_ptr<webrtc::VideoEncoder> CustomEncoderFactory::CreateVideoEncoder(const webrtc::SdpVideoFormat &format) {
-    std::cerr << "CREATE ENCODER " << format.name << std::endl;
     if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
         return webrtc::VP8Encoder::Create();
     if (absl::EqualsIgnoreCase(format.name, cricket::kVp9CodecName))
         return webrtc::VP9Encoder::Create(cricket::VideoCodec(format));
-    if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName))
-        return FFmpegVideoEncoder::Create(cricket::VideoCodec(format), frame_rate);
-//        return webrtc::H264Encoder::Create(cricket::VideoCodec(format));
-    if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName))
-        return FFmpegVideoEncoder::Create(cricket::VideoCodec(format), frame_rate);
+    if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName)) {
+        if (hardware_type_ != CodecUtils::HW_TYPE_NONE) {
+            return FFmpegVideoEncoder::Create(cricket::VideoCodec(format), frame_rate, hardware_type_);
+        } else {
+            return webrtc::H264Encoder::Create(cricket::VideoCodec(format));
+        }
+    }
+    if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName) && hardware_type_ != CodecUtils::HW_TYPE_NONE)
+        return FFmpegVideoEncoder::Create(cricket::VideoCodec(format), frame_rate, hardware_type_);
     return nullptr;
 }
 
@@ -61,6 +62,10 @@ std::unique_ptr<CustomEncoderFactory> CustomEncoderFactory::Create() {
 }
 
 void CustomEncoderFactory::updateFrameRate(int num, int den) {
-    frame_rate = av_q2d({ num, den});
+    frame_rate = av_q2d({num, den});
 }
 
+void CustomEncoderFactory::setConfiguration(json configuration) {
+    std::string type = configuration.value("hardware", "");
+    hardware_type_ = CodecUtils::ParseHardwareType(type);
+}

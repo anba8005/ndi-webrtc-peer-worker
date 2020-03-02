@@ -11,11 +11,13 @@
 #define NAL_SC_LENGTH 4
 #define DEFAULT_FPS (AVRational) {25, 1}
 
-FFmpegVideoEncoder::FFmpegVideoEncoder(const cricket::VideoCodec &codec, double frame_rate) : encoded_image_callback_(
+FFmpegVideoEncoder::FFmpegVideoEncoder(const cricket::VideoCodec &codec, double frame_rate,
+                                       CodecUtils::HardwareType hardware_type) : encoded_image_callback_(
         nullptr),
-                                                                                              width_(0),
-                                                                                              height_(0),
-                                                                                              frame_rate_(frame_rate) {
+                                                                                 width_(0),
+                                                                                 hardware_type_(hardware_type),
+                                                                                 height_(0),
+                                                                                 frame_rate_(frame_rate) {
     codec_type_ = findCodecType(codec.name);
     coder_profile_level_ = webrtc::H264::ParseSdpProfileLevelId(codec.params);
 }
@@ -24,8 +26,9 @@ FFmpegVideoEncoder::~FFmpegVideoEncoder() {
     Release();
 }
 
-std::unique_ptr<FFmpegVideoEncoder> FFmpegVideoEncoder::Create(const cricket::VideoCodec &codec, double frame_rate) {
-    return absl::make_unique<FFmpegVideoEncoder>(codec, frame_rate);
+std::unique_ptr<FFmpegVideoEncoder> FFmpegVideoEncoder::Create(const cricket::VideoCodec &codec, double frame_rate,
+                                                               CodecUtils::HardwareType hardware_type) {
+    return absl::make_unique<FFmpegVideoEncoder>(codec, frame_rate, hardware_type);
 }
 
 int
@@ -51,7 +54,8 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
     height_ = codec_settings->height;
 
     // init HW device
-    AVHWDeviceType type = findHWDeviceType("vaapi");
+    auto hardware_type_str = CodecUtils::ConvertHardwareTypeToString(hardware_type_);
+    AVHWDeviceType type = findHWDeviceType(hardware_type_str.c_str());
     if (type == AV_HWDEVICE_TYPE_NONE || !createHWContext(type)) {
         return WEBRTC_VIDEO_CODEC_ERROR;
     }

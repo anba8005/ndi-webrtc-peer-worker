@@ -16,6 +16,8 @@
 
 #include "BaseAudioDeviceModule.h"
 #include "VideoDeviceModule.h"
+#include "webrtc/CustomDecoderFactory.h"
+#include "webrtc/CustomEncoderFactory.h"
 
 #include "json.hpp"
 
@@ -56,6 +58,9 @@ private:
     //
     std::unique_ptr<rtc::BasicNetworkManager> networkManager;
     std::unique_ptr<rtc::PacketSocketFactory> socketFactory;
+    //
+    CustomEncoderFactory* encoderFactory;
+    CustomDecoderFactory* decoderFactory;
 };
 
 

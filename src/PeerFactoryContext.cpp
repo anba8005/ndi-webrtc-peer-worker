@@ -2,6 +2,9 @@
 // Created by anba8005 on 12/15/18.
 //
 
+
+
+
 #include "PeerFactoryContext.h"
 
 #include "api/create_peerconnection_factory.h"
@@ -9,15 +12,10 @@
 #include "api/peer_connection_proxy.h"
 #include "api/audio_codecs/builtin_audio_decoder_factory.h"
 #include "api/audio_codecs/builtin_audio_encoder_factory.h"
-#include "api/video_codecs/builtin_video_decoder_factory.h"
-#include "api/video_codecs/builtin_video_encoder_factory.h"
 #include "p2p/base/basic_packet_socket_factory.h"
 #include "p2p/client/basic_port_allocator.h"
 #include "pc/peer_connection.h"
 #include "system_wrappers/include/field_trial.h"
-
-#include "webrtc/CustomDecoderFactory.h"
-#include "webrtc/CustomEncoderFactory.h"
 
 #include <memory>
 #include <iostream>
@@ -48,10 +46,12 @@ PeerFactoryContext::PeerFactoryContext() {
 
     // create encoder factory
     auto encoderFactory = CustomEncoderFactory::Create();
+    this->encoderFactory = encoderFactory.get();
     vdm->setFrameRateUpdater(encoderFactory.get());
 
     // create decoder factory
     auto decoderFactory = CustomDecoderFactory::Create();
+    this->decoderFactory = decoderFactory.get();
 
     // Create the factory
     factory = webrtc::CreatePeerConnectionFactory(
@@ -99,6 +99,16 @@ PeerFactoryContext::setConfiguration(json configuration) {
     }
     //
     config.set_cpu_adaptation(configuration.value("cpuAdaptation", true));
+    //
+    const json encoder = configuration["encoder"];
+    if (!encoder.empty()) {
+        this->encoderFactory->setConfiguration(encoder);
+    }
+    //
+    const json decoder = configuration["decoder"];
+    if (!decoder.empty()) {
+        this->decoderFactory->setConfiguration(encoder);
+    }
 }
 
 BaseAudioDeviceModule *PeerFactoryContext::getADM() {

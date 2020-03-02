@@ -2,12 +2,8 @@
 // Created by anba8005 on 26/02/2020.
 //
 
-#define OWT_ENABLE_H265
-
 #include "CustomDecoderFactory.h"
-#include "CodecUtils.h"
 #include "FFmpegVideoDecoder.h"
-#include "api/video_codecs/builtin_video_decoder_factory.h"
 #include "modules/video_coding/codecs/h264/include/h264.h"
 #include "modules/video_coding/codecs/vp8/include/vp8.h"
 #include "modules/video_coding/codecs/vp9/include/vp9.h"
@@ -16,7 +12,7 @@
 
 #include <iostream>
 
-CustomDecoderFactory::CustomDecoderFactory() {
+CustomDecoderFactory::CustomDecoderFactory() : hardware_type_(CodecUtils::HW_TYPE_NONE) {
 }
 
 
@@ -45,7 +41,7 @@ std::unique_ptr<webrtc::VideoDecoder> CustomDecoderFactory::CreateVideoDecoder(c
     if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName))
         return webrtc::H264Decoder::Create();
     if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName))
-        return FFmpegVideoDecoder::Create(cricket::kH265CodecName);
+        return FFmpegVideoDecoder::Create(cricket::kH265CodecName, hardware_type_);
     return nullptr;
 }
 
@@ -53,7 +49,12 @@ std::unique_ptr<webrtc::VideoDecoder> CustomDecoderFactory::CreateVideoDecoder(c
 //
 //
 
-std::unique_ptr< CustomDecoderFactory> CustomDecoderFactory::Create() {
+std::unique_ptr<CustomDecoderFactory> CustomDecoderFactory::Create() {
     return absl::make_unique<CustomDecoderFactory>();
+}
+
+void CustomDecoderFactory::setConfiguration(json configuration) {
+    std::string type = configuration.value("hardware", "");
+    hardware_type_ = CodecUtils::ParseHardwareType(type);
 }
 

@@ -5,8 +5,6 @@
 #ifndef NDI_WEBRTC_PEER_WORKER_CODECUTILS_H
 #define NDI_WEBRTC_PEER_WORKER_CODECUTILS_H
 
-#define OWT_ENABLE_H265
-
 #include <vector>
 #include "api/video_codecs/sdp_video_format.h"
 #include "api/video/video_codec_type.h"
@@ -14,6 +12,11 @@
 
 class CodecUtils {
 public:
+
+    enum HardwareType {
+        HW_TYPE_NONE,
+        HW_TYPE_VAAPI,
+    };
 
     static webrtc::SdpVideoFormat
     CreateH264Format(webrtc::H264::Profile profile, webrtc::H264::Level level, const std::string &packetization_mode);
@@ -23,6 +26,10 @@ public:
     static std::vector<webrtc::SdpVideoFormat> GetSupportedH265Codecs();
 
     static webrtc::VideoCodecType ConvertSdpFormatToCodecType(webrtc::SdpVideoFormat format);
+
+    static HardwareType ParseHardwareType(std::string type);
+
+    static std::string ConvertHardwareTypeToString(HardwareType type);
 };
 
 

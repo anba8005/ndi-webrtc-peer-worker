@@ -5,13 +5,12 @@
 #ifndef NDI_WEBRTC_PEER_WORKER_FFMPEGVIDEOENCODER_H
 #define NDI_WEBRTC_PEER_WORKER_FFMPEGVIDEOENCODER_H
 
-#define OWT_ENABLE_H265
-
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavutil/hwcontext.h"
 }
 
+#include "CodecUtils.h"
 #include "media/base/codec.h"
 #include "modules/video_coding/include/video_codec_interface.h"
 #include "rtc_base/system/rtc_export.h"
@@ -31,11 +30,13 @@ struct AVBufferDeleter {
 
 class RTC_EXPORT FFmpegVideoEncoder : public webrtc::VideoEncoder {
 public:
-    explicit FFmpegVideoEncoder(const cricket::VideoCodec &codec, double frame_rate);
+    explicit FFmpegVideoEncoder(const cricket::VideoCodec &codec, double frame_rate,
+                                CodecUtils::HardwareType hardware_type);
 
     virtual ~FFmpegVideoEncoder() override;
 
-    static std::unique_ptr<FFmpegVideoEncoder> Create(const cricket::VideoCodec &codec, double frame_rate);
+    static std::unique_ptr<FFmpegVideoEncoder>
+    Create(const cricket::VideoCodec &codec, double frame_rate, CodecUtils::HardwareType hardware_type);
 
     int InitEncode(const webrtc::VideoCodec *codec_settings, int number_of_cores, size_t max_payload_size) override;
 
@@ -58,6 +59,7 @@ public:
 
 private:
     webrtc::VideoCodecType codec_type_;
+    CodecUtils::HardwareType hardware_type_;
     absl::optional<webrtc::H264::ProfileLevelId> coder_profile_level_;
     std::unique_ptr<AVCodecContext, AVCodecContextDeleter> av_context_;
     std::unique_ptr<AVFrame, AVFrameDeleter> av_frame_;
