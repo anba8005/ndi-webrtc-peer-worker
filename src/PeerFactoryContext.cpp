@@ -107,7 +107,7 @@ PeerFactoryContext::setConfiguration(json configuration) {
     //
     const json decoder = configuration["decoder"];
     if (!decoder.empty()) {
-        this->decoderFactory->setConfiguration(encoder);
+        this->decoderFactory->setConfiguration(decoder);
     }
 }
 
