@@ -23,6 +23,8 @@ webrtc::SdpVideoFormat CodecUtils::CreateH264Format(webrtc::H264::Profile profil
 
 std::vector<webrtc::SdpVideoFormat> CodecUtils::GetAuxH264Codecs() {
     return {
+            CreateH264Format(webrtc::H264::kProfileHigh, webrtc::H264::kLevel3_1, "1"),
+            CreateH264Format(webrtc::H264::kProfileHigh, webrtc::H264::kLevel3_1, "0"),
             CreateH264Format(webrtc::H264::kProfileConstrainedHigh, webrtc::H264::kLevel3_1, "1"),
             CreateH264Format(webrtc::H264::kProfileConstrainedHigh, webrtc::H264::kLevel3_1, "0")};
 }
