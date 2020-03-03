@@ -457,6 +457,8 @@ int FFmpegVideoEncoder::getCodecProfile() {
                     return FF_PROFILE_H264_CONSTRAINED_BASELINE;
                 case webrtc::H264::kProfileMain:
                     return FF_PROFILE_H264_MAIN;
+                default:
+                    return FF_PROFILE_H264_CONSTRAINED_BASELINE;
             }
         } else {
             return FF_PROFILE_H264_CONSTRAINED_BASELINE; // DEFAULT
