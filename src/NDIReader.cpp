@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-NDIReader::NDIReader() : running(false), _pNDI_recv(nullptr) {}
+NDIReader::NDIReader() : running(false), _pNDI_recv(nullptr), no_data_reporter("NDIReader: No data received") {}
 
 NDIReader::~NDIReader() {
     if (this->isRunning()) {
@@ -127,7 +127,7 @@ void NDIReader::run() {
         switch (NDIlib_recv_capture_v2(_pNDI_recv, &video_frame, &audio_frame, &metadata_frame, 1000)) {
             // No data
             case NDIlib_frame_type_none:
-                std::cerr << "No data received" << std::endl;
+                no_data_reporter.report();
                 break;
 
                 // Video data
@@ -135,7 +135,7 @@ void NDIReader::run() {
                 // send
                 if (vdm) {
                     //
-                    vdm->updateFrameRate(video_frame.frame_rate_N,video_frame.frame_rate_D);
+                    vdm->updateFrameRate(video_frame.frame_rate_N, video_frame.frame_rate_D);
                     //
                     vdm->feedFrame(video_frame.xres, video_frame.yres, video_frame.p_data,
                                    video_frame.line_stride_in_bytes, video_frame.timestamp, maxWidth, maxHeight);

@@ -14,6 +14,7 @@
 #define _WINSOCK2API_
 #define _WINSOCKAPI_
 
+#include "ThrottledReporter.h"
 #include "media/base/adapted_video_track_source.h"
 #include "api/video/i420_buffer.h"
 #include "webrtc/FrameRateUpdater.h"
@@ -47,6 +48,9 @@ public:
 	void setFrameRateUpdater(FrameRateUpdater* updater);
 private:
     FrameRateUpdater* _updater;
+
+    ThrottledReporter _skip_frame_reporter;
+
 };
 
 

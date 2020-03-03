@@ -18,6 +18,7 @@
 #include "common_types.h"
 #include "modules/audio_device/include/audio_device.h"
 #include "AudioBuffer.h"
+#include "ThrottledReporter.h"
 
 /// This class implements an `AudioDeviceModule` that can be used to process
 /// arbitrary audio packets.
@@ -229,6 +230,8 @@ private:
     /// Protects |_audioCallback| that is accessed from `_processThread` and
     /// the main thread.
     rtc::CriticalSection _critCallback;
+
+    ThrottledReporter _sample_mismatch_reporter;
 };
 
 

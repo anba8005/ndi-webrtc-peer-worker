@@ -74,7 +74,7 @@ add_executable(
 		src/webrtc/CodecUtils.cpp src/webrtc/CodecUtils.h
 		src/webrtc/FFmpegVideoDecoder.cpp src/webrtc/FFmpegVideoDecoder.h
 		src/webrtc/FFmpegVideoEncoder.cpp src/webrtc/FFmpegVideoEncoder.h
-		src/webrtc/FrameRateUpdater.h)
+		src/webrtc/FrameRateUpdater.h src/ThrottledReporter.cpp src/ThrottledReporter.h)
 
 target_compile_options(ndi-webrtc-peer-worker PUBLIC ${COMPILE_OPTIONS})
 set_target_properties(ndi-webrtc-peer-worker PROPERTIES LINK_FLAGS_RELEASE -s)

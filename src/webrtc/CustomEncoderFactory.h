@@ -39,6 +39,7 @@ private:
     CodecUtils::HardwareType hardware_type_;
     std::atomic<double> frame_rate;
     std::vector<std::string> software_override_;
+    bool disable_h264_high_profile_;
 
     bool hasSoftwareOverride(std::string codec);
 };

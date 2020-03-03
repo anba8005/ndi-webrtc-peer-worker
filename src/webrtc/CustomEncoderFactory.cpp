@@ -12,7 +12,8 @@
 
 #include <iostream>
 
-CustomEncoderFactory::CustomEncoderFactory() : frame_rate(0), hardware_type_(CodecUtils::HW_TYPE_NONE) {
+CustomEncoderFactory::CustomEncoderFactory() : frame_rate(0), hardware_type_(CodecUtils::HW_TYPE_NONE),
+                                               disable_h264_high_profile_(false) {
 }
 
 CustomEncoderFactory::~CustomEncoderFactory() {
@@ -37,8 +38,10 @@ std::vector<webrtc::SdpVideoFormat> CustomEncoderFactory::GetSupportedFormats() 
     supported_codecs.push_back(webrtc::SdpVideoFormat(cricket::kVp8CodecName));
     for (const webrtc::SdpVideoFormat &format : webrtc::SupportedVP9Codecs())
         supported_codecs.push_back(format);
-    for (const webrtc::SdpVideoFormat &format : CodecUtils::GetAuxH264Codecs())
-        supported_codecs.push_back(format);
+    if (!disable_h264_high_profile_) {
+        for (const webrtc::SdpVideoFormat &format : CodecUtils::GetAuxH264Codecs())
+            supported_codecs.push_back(format);
+    }
     for (const webrtc::SdpVideoFormat &format : webrtc::SupportedH264Codecs())
         supported_codecs.push_back(format);
     for (const webrtc::SdpVideoFormat &format : CodecUtils::GetSupportedH265Codecs())
@@ -63,8 +66,11 @@ void CustomEncoderFactory::updateFrameRate(int num, int den) {
 }
 
 void CustomEncoderFactory::setConfiguration(json configuration) {
+    //
     std::string type = configuration.value("hardware", "");
     hardware_type_ = CodecUtils::ParseHardwareType(type);
+    //
+    disable_h264_high_profile_ = configuration.value("disableH264HighProfile", false);
     //
     software_override_.clear();
     json software = configuration["software"];

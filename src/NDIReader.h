@@ -14,6 +14,7 @@
 #include <Processing.NDI.Lib.h>
 #include "BaseAudioDeviceModule.h"
 #include "VideoDeviceModule.h"
+#include "ThrottledReporter.h"
 
 using json = nlohmann::json;
 
@@ -57,7 +58,8 @@ private:
 
     int maxWidth;
     int maxHeight;
-    bool lowBandwidth;
+
+    ThrottledReporter no_data_reporter;
 };
 
 

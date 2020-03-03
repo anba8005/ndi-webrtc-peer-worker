@@ -34,7 +34,8 @@ enum {
 BaseAudioDeviceModule::BaseAudioDeviceModule()
         : _lastProcessTimeMS(0), _audioCallback(nullptr), _recording(false), _playing(false), _playIsInitialized(false),
           _recIsInitialized(false), _currentMicLevel(kMaxVolume), _started(false), _nextFrameTime(0),
-          _sendSamples(kBufferBytes), _recvSamples(kBufferBytes) {
+          _sendSamples(kBufferBytes), _recvSamples(kBufferBytes),
+          _sample_mismatch_reporter("BaseAudioDeviceModule receiveFrameP nSamplesOut mismatch: "){
 }
 
 BaseAudioDeviceModule::~BaseAudioDeviceModule() {
@@ -192,7 +193,7 @@ void BaseAudioDeviceModule::receiveFrameP() {
             assert(false);
         }
         if (nSamplesOut != kNumberSamples * kNumberOfChannels) {
-            std::cerr << nSamplesOut << std::endl;
+            _sample_mismatch_reporter.report();
         }
     }
 }
