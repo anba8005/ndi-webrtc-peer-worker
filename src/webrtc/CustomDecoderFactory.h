@@ -31,6 +31,9 @@ public:
 
 private:
     CodecUtils::HardwareType hardware_type_;
+    std::vector<std::string> software_override_;
+
+    bool hasSoftwareOverride(std::string codec);
 };
 
 

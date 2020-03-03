@@ -83,6 +83,7 @@ int32_t FFmpegVideoDecoder::InitDecode(const webrtc::VideoCodec *codec_settings,
     av_context_->pix_fmt = kPixelFormatDefault;
     av_context_->extradata = nullptr;
     av_context_->extradata_size = 0;
+    av_context_->hwaccel_flags = AV_HWACCEL_FLAG_ALLOW_PROFILE_MISMATCH;
 
     // If this is ever increased, look at |av_context_->thread_safe_callbacks| and
     // make it possible to disable the thread checker in the frame buffer pool.
@@ -117,11 +118,6 @@ int32_t FFmpegVideoDecoder::InitDecode(const webrtc::VideoCodec *codec_settings,
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
 
-    av_frame_.reset(av_frame_alloc());
-
-    if (type != AV_HWDEVICE_TYPE_NONE)
-        sw_frame_.reset(av_frame_alloc());
-
     return WEBRTC_VIDEO_CODEC_OK;
 }
 
@@ -131,8 +127,6 @@ int32_t FFmpegVideoDecoder::Release() {
         packet_data_size_ = 0;
     }
     av_context_.reset();
-    av_frame_.reset();
-    sw_frame_.reset();
     hw_context_.reset();
     hw_pixel_format_ = AV_PIX_FMT_NONE;
     return WEBRTC_VIDEO_CODEC_OK;
@@ -184,6 +178,10 @@ int32_t FFmpegVideoDecoder::Decode(const webrtc::EncodedImage &input_image, bool
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
 
+    // alloc frames
+    std::unique_ptr<AVFrame, AVFrameDeleter> av_frame_(av_frame_alloc());
+    std::unique_ptr<AVFrame, AVFrameDeleter> sw_frame_;
+
     result = avcodec_receive_frame(av_context_.get(), av_frame_.get());
     if (result < 0) {
         RTC_LOG(LS_ERROR) << "avcodec_receive_frame error: " << result;
@@ -197,8 +195,12 @@ int32_t FFmpegVideoDecoder::Decode(const webrtc::EncodedImage &input_image, bool
     AVFrame *frame;
     if (av_frame_->format == hw_pixel_format_) {
         /* retrieve data from GPU to CPU */
-        if (av_hwframe_transfer_data(sw_frame_.get(), av_frame_.get(), 0) < 0) {
+        sw_frame_.reset(av_frame_alloc());
+        result = av_hwframe_transfer_data(sw_frame_.get(), av_frame_.get(), 0);
+        if (result < 0) {
             RTC_LOG(LS_ERROR) << "Error transferring the data to system memory" << result;
+            char buffer[AV_ERROR_MAX_STRING_SIZE];
+            RTC_LOG(LS_ERROR) << "Error code: " << av_make_error_string(buffer, AV_ERROR_MAX_STRING_SIZE, result);
             return WEBRTC_VIDEO_CODEC_ERROR;
         }
         frame = sw_frame_.get();

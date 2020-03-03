@@ -34,14 +34,27 @@ std::vector<webrtc::SdpVideoFormat> CustomDecoderFactory::GetSupportedFormats() 
 }
 
 std::unique_ptr<webrtc::VideoDecoder> CustomDecoderFactory::CreateVideoDecoder(const webrtc::SdpVideoFormat &format) {
-    if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
-        return webrtc::VP8Decoder::Create();
-    if (absl::EqualsIgnoreCase(format.name, cricket::kVp9CodecName))
-        return webrtc::VP9Decoder::Create();
-    if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName))
-        return webrtc::H264Decoder::Create();
-    if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName))
-        return FFmpegVideoDecoder::Create(cricket::kH265CodecName, hardware_type_);
+    if (hasSoftwareOverride(format.name)) {
+        // use internal decoder (when possible)
+        if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
+            return webrtc::VP8Decoder::Create();
+        if (absl::EqualsIgnoreCase(format.name, cricket::kVp9CodecName))
+            return webrtc::VP9Decoder::Create();
+        if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName))
+            return webrtc::H264Decoder::Create();
+        if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName))
+            return FFmpegVideoDecoder::Create(cricket::kH265CodecName, CodecUtils::HW_TYPE_NONE);
+    } else {
+        // use ffmpeg decoder
+        if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
+            return FFmpegVideoDecoder::Create(cricket::kVp8CodecName, hardware_type_);
+        if (absl::EqualsIgnoreCase(format.name, cricket::kVp9CodecName))
+            return FFmpegVideoDecoder::Create(cricket::kVp9CodecName, hardware_type_);
+        if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName))
+            return FFmpegVideoDecoder::Create(cricket::kH264CodecName, hardware_type_);
+        if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName))
+            return FFmpegVideoDecoder::Create(cricket::kH265CodecName, hardware_type_);
+    }
     return nullptr;
 }
 
@@ -56,5 +69,22 @@ std::unique_ptr<CustomDecoderFactory> CustomDecoderFactory::Create() {
 void CustomDecoderFactory::setConfiguration(json configuration) {
     std::string type = configuration.value("hardware", "");
     hardware_type_ = CodecUtils::ParseHardwareType(type);
+    //
+    software_override_.clear();
+    json software = configuration["software"];
+    if (software != nullptr && software.is_array()) {
+        for (auto &codec : software) {
+            software_override_.push_back(codec.get<std::string>());
+        }
+    }
+}
+
+bool CustomDecoderFactory::hasSoftwareOverride(std::string codec) {
+    for (auto &override : software_override_) {
+        if (absl::EqualsIgnoreCase(override, codec)) {
+            return true;
+        }
+    }
+    return false;
 }
 

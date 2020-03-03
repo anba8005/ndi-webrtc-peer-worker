@@ -449,9 +449,8 @@ int FFmpegVideoEncoder::getCodecProfile() {
     if (codec_type_ == webrtc::kVideoCodecH264) {
         if (coder_profile_level_.has_value()) {
             switch (coder_profile_level_->profile) {
-                case webrtc::H264::kProfileConstrainedHigh:
-                    return FF_PROFILE_H264_CONSTRAINED | FF_PROFILE_H264_HIGH;
                 case webrtc::H264::kProfileHigh:
+                case webrtc::H264::kProfileConstrainedHigh:
                     return FF_PROFILE_H264_HIGH;
                 case webrtc::H264::kProfileBaseline:
                 case webrtc::H264::kProfileConstrainedBaseline:

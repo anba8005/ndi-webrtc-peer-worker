@@ -19,19 +19,16 @@ CustomEncoderFactory::~CustomEncoderFactory() {
 }
 
 std::unique_ptr<webrtc::VideoEncoder> CustomEncoderFactory::CreateVideoEncoder(const webrtc::SdpVideoFormat &format) {
-    if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
-        return webrtc::VP8Encoder::Create();
-    if (absl::EqualsIgnoreCase(format.name, cricket::kVp9CodecName))
-        return webrtc::VP9Encoder::Create(cricket::VideoCodec(format));
-    if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName)) {
-        if (hardware_type_ != CodecUtils::HW_TYPE_NONE) {
-            return FFmpegVideoEncoder::Create(cricket::VideoCodec(format), frame_rate, hardware_type_);
-        } else {
+    if (hasSoftwareOverride(format.name) || hardware_type_ == CodecUtils::HW_TYPE_NONE) {
+        if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
+            return webrtc::VP8Encoder::Create();
+        if (absl::EqualsIgnoreCase(format.name, cricket::kVp9CodecName))
+            return webrtc::VP9Encoder::Create(cricket::VideoCodec(format));
+        if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName))
             return webrtc::H264Encoder::Create(cricket::VideoCodec(format));
-        }
-    }
-    if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName) && hardware_type_ != CodecUtils::HW_TYPE_NONE)
+    } else {
         return FFmpegVideoEncoder::Create(cricket::VideoCodec(format), frame_rate, hardware_type_);
+    }
     return nullptr;
 }
 
@@ -68,4 +65,21 @@ void CustomEncoderFactory::updateFrameRate(int num, int den) {
 void CustomEncoderFactory::setConfiguration(json configuration) {
     std::string type = configuration.value("hardware", "");
     hardware_type_ = CodecUtils::ParseHardwareType(type);
+    //
+    software_override_.clear();
+    json software = configuration["software"];
+    if (software != nullptr && software.is_array()) {
+        for (auto &codec : software) {
+            software_override_.push_back(codec.get<std::string>());
+        }
+    }
+}
+
+bool CustomEncoderFactory::hasSoftwareOverride(std::string codec) {
+    for (auto &override : software_override_) {
+        if (absl::EqualsIgnoreCase(override, codec)) {
+            return true;
+        }
+    }
+    return false;
 }

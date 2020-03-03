@@ -38,6 +38,9 @@ public:
 private:
     CodecUtils::HardwareType hardware_type_;
     std::atomic<double> frame_rate;
+    std::vector<std::string> software_override_;
+
+    bool hasSoftwareOverride(std::string codec);
 };
 
 

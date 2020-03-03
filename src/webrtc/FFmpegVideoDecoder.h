@@ -74,8 +74,6 @@ private:
     CodecUtils::HardwareType hardware_type_;
     webrtc::I420BufferPool pool_;
     std::unique_ptr<AVCodecContext, AVCodecContextDeleter> av_context_;
-    std::unique_ptr<AVFrame, AVFrameDeleter> av_frame_;
-    std::unique_ptr<AVFrame, AVFrameDeleter> sw_frame_;
     std::unique_ptr<AVBufferRef, AVBufferDeleter> hw_context_;
     AVPixelFormat hw_pixel_format_;
     uint8_t* packet_data_;
