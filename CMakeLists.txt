@@ -4,9 +4,9 @@ set(EXECUTABLE_OUTPUT_PATH "bin")
 
 # WEBRTC
 IF (WIN32)
-	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-8708428-linux-x64)
+	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-48bc4a6-linux-x64)
 ELSE()
-	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-8708428-linux-x64)
+	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-48bc4a6-linux-x64)
 ENDIF()
 
 set(CMAKE_CXX_STANDARD 14)

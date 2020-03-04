@@ -2,7 +2,7 @@ FROM ubuntu:bionic
 
 RUN sed --in-place --regexp-extended "s/(\/\/)(archive\.ubuntu)/\1lt.\2/" /etc/apt/sources.list && \
     apt update && apt -y install build-essential make nasm sudo cmake libx11-dev libglu1-mesa-dev \
-    libavahi-client3
+    libavahi-client3 libva-dev
 
 RUN mkdir -p /code/build/CMakeFiles
 
