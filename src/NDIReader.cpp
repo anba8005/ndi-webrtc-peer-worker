@@ -19,9 +19,20 @@ NDIReader::~NDIReader() {
 }
 
 void NDIReader::open(Configuration config) {
-    //
+    // configure
+    configMutex.lock();
     this->maxWidth = config.maxWidth;
     this->maxHeight = config.maxHeight;
+    this->numChannels = config.numChannels;
+    this->channelOffset = config.channelOffset;
+    configMutex.unlock();
+
+    std::cerr << "NDI talkback config offset -> " << config.channelOffset << " channels -> " << config.numChannels << std::endl;
+
+    // skip if already opened with same name
+    if (_pNDI_recv && this->name == config.name) {
+        return; // just reconfigure
+    }
 
     // Create the descriptor of the object to create
     NDIlib_find_create_t find_create;
@@ -91,6 +102,9 @@ void NDIReader::open(Configuration config) {
         NDIlib_recv_connect(_pNDI_recv, &_ndi_source);
     }
 
+    // save name
+    this->name = config.name;
+
     // cleanup
     NDIlib_find_destroy(pNDI_find);
 }
@@ -123,6 +137,15 @@ void NDIReader::run() {
         NDIlib_audio_frame_v2_t audio_frame;
         NDIlib_metadata_frame_t metadata_frame;
         NDIlib_audio_frame_interleaved_16s_t audio_frame_16bpp_interleaved;
+        NDIlib_audio_frame_v2_t audio_frame_extracted;
+
+        //
+        configMutex.lock();
+        int maxWidth = this->maxWidth;
+        int maxHeight = this->maxHeight;
+        int channelOffset = this->channelOffset;
+        int numChannels = this->numChannels;
+        configMutex.unlock();
 
         switch (NDIlib_recv_capture_v2(_pNDI_recv, &video_frame, &audio_frame, &metadata_frame, 1000)) {
             // No data
@@ -147,16 +170,22 @@ void NDIReader::run() {
                 // Audio data
             case NDIlib_frame_type_audio:
                 // Allocate enough space for 16bpp interleaved buffer
-
                 audio_frame_16bpp_interleaved.reference_level = 4;
                 audio_frame_16bpp_interleaved.p_data = new int16_t[audio_frame.no_samples * audio_frame.no_channels];
                 audio_frame_16bpp_interleaved.sample_rate = audio_frame.sample_rate;
                 audio_frame_16bpp_interleaved.no_channels = audio_frame.no_samples;
 
+                // extract target audio frame
+                audio_frame_extracted = this->extractAudioFrame(audio_frame, channelOffset, numChannels);
+
                 // Convert it
-                NDIlib_util_audio_to_interleaved_16s_v2(&audio_frame, &audio_frame_16bpp_interleaved);
+                NDIlib_util_audio_to_interleaved_16s_v2(&audio_frame_extracted, &audio_frame_16bpp_interleaved);
+
                 // Free the original buffer
                 NDIlib_recv_free_audio_v2(_pNDI_recv, &audio_frame);
+                if (audio_frame.p_data != audio_frame_extracted.p_data) {
+                    delete audio_frame_extracted.p_data;
+                }
 
                 // send
                 if (adm)
@@ -232,6 +261,37 @@ json NDIReader::findSources() {
     return result;
 }
 
+NDIlib_audio_frame_v2_t NDIReader::extractAudioFrame(NDIlib_audio_frame_v2_t src, int channelOffset, int numChannels) {
+    if (channelOffset + numChannels > src.no_channels) {
+        std::cerr << "NDIReader: Too many audio channels requested. Have:" << src.no_channels << " Want:"
+                  << channelOffset + numChannels << std::endl;
+        exit(1);
+    }
+
+
+    if (channelOffset == 0 && src.no_channels == numChannels) {
+        return src;
+    }
+
+    // set vars
+    uint8_t *srcData = (uint8_t *) src.p_data;
+    uint8_t *data = new uint8_t[numChannels * src.channel_stride_in_bytes];
+    int stride = src.channel_stride_in_bytes;
+
+    // copy data
+    for (int i = 0; i < numChannels; i++) {
+        int k = i + channelOffset;
+        memcpy(data + (i * stride), srcData + (k * stride), stride);
+    }
+
+    // create result
+    NDIlib_audio_frame_v2_t result = src;
+    result.no_channels = numChannels;
+    result.p_data = (float *) data;
+
+    return result;
+}
+
 NDIReader::Configuration::Configuration(json payload) {
     this->name = payload.value("name", "");
     if (name.empty())
@@ -240,6 +300,8 @@ NDIReader::Configuration::Configuration(json payload) {
     this->maxWidth = payload.value("width", 0);
     this->maxHeight = payload.value("height", 0);
     this->lowBandwidth = payload.value("lowBandwidth", false);
+    this->channelOffset = payload.value("channelOffset", 0);
+    this->numChannels = payload.value("numChannels", 2);
 
 
 }

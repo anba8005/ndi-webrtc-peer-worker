@@ -27,6 +27,8 @@ public:
         int maxWidth;
         int maxHeight;
         bool lowBandwidth;
+        int channelOffset;
+        int numChannels;
 
         Configuration(json payload);
     };
@@ -47,6 +49,7 @@ public:
 
 private:
     void run();
+    NDIlib_audio_frame_v2_t extractAudioFrame(NDIlib_audio_frame_v2_t src, int channelOffset, int numChannels);
 
     std::thread runner;
     std::atomic<bool> running;
@@ -56,8 +59,12 @@ private:
     VideoDeviceModule *vdm;
     BaseAudioDeviceModule *adm;
 
+    std::string name;
     int maxWidth;
     int maxHeight;
+    int channelOffset;
+    int numChannels;
+    std::mutex configMutex;
 
     ThrottledReporter no_data_reporter;
 };
