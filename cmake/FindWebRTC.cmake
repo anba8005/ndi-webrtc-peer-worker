@@ -156,7 +156,7 @@ if(WEBRTC_INCLUDE_DIR)
 
     # For ABI compatability between precompiled WebRTC libraries using clang and new GCC versions
     #add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
-    set(WEBRTC_DEPENDENCIES -lrt -lX11 -lGLU) # -lGL
+    set(WEBRTC_DEPENDENCIES -lrt -lX11 -lGLU -lva -lva-drm) # -lGL
 
     # Enable libstdc++ debugging if you build WebRTC with `enable_iterator_debugging=true`
     # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG=1")
