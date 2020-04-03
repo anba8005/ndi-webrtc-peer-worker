@@ -13,6 +13,7 @@
 #define USE_BUILTIN_SW_CODECS
 
 #include "api/peer_connection_interface.h"
+#include "p2p/client/basic_port_allocator.h"
 
 #include "BaseAudioDeviceModule.h"
 #include "VideoDeviceModule.h"
@@ -58,6 +59,7 @@ private:
     //
     std::unique_ptr<rtc::BasicNetworkManager> networkManager;
     std::unique_ptr<rtc::PacketSocketFactory> socketFactory;
+    std::unique_ptr<cricket::BasicPortAllocator> portAllocator;
     //
     CustomEncoderFactory* encoderFactory;
     CustomDecoderFactory* decoderFactory;

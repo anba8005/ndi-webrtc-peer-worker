@@ -20,6 +20,10 @@
 #include <memory>
 #include <iostream>
 
+// Minimum and maximum port for port range
+//static const int kMinPort = 44000;
+//static const int kMaxPort = 45000;
+
 PeerFactoryContext::PeerFactoryContext() {
     //
     webrtc::field_trial::InitFieldTrialsFromString("WebRTC-FlexFEC-03-Advertised/Enabled/WebRTC-FlexFEC-03/Enabled/");
@@ -66,6 +70,9 @@ PeerFactoryContext::PeerFactoryContext() {
     //
     networkManager.reset(new rtc::BasicNetworkManager());
     socketFactory.reset(new rtc::BasicPacketSocketFactory(networkThread.get()));
+//    portAllocator.reset(new cricket::BasicPortAllocator(networkManager.get(), socketFactory.get()));
+//    portAllocator->SetPortRange(kMinPort, kMaxPort);
+
 }
 
 PeerFactoryContext::~PeerFactoryContext() {
@@ -121,7 +128,7 @@ VideoDeviceModule *PeerFactoryContext::getVDM() {
 
 rtc::scoped_refptr<webrtc::PeerConnectionInterface>
 PeerFactoryContext::createPeerConnection(webrtc::PeerConnectionObserver *observer) {
-    auto pc = this->factory->CreatePeerConnection(this->config, nullptr, nullptr, observer);
+    auto pc = this->factory->CreatePeerConnection(this->config, /*std::move(portAllocator)*/ nullptr, nullptr, observer);
     if (!pc)
         throw std::runtime_error("Failed to create WebRTC peer connection");
     return pc;
