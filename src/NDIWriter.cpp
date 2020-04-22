@@ -15,7 +15,8 @@
 //#define NDI_TIME_BASE 10000000
 //#define NDI_TIME_BASE_Q (AVRational){1, NDI_TIME_BASE}
 
-NDIWriter::NDIWriter() : _videoTrack(nullptr), _audioTrack(nullptr),                      _pNDI_send(nullptr){
+NDIWriter::NDIWriter() : _videoTrack(nullptr), _audioTrack(nullptr), _pNDI_send(nullptr), _connected(false),
+						 _connected_attempts(0) {
 }
 
 NDIWriter::~NDIWriter() {
@@ -91,6 +92,18 @@ void NDIWriter::OnFrame(const webrtc::VideoFrame &yuvframe) {
 //	std::cerr << "On video frame: " << yuvframe.width() << 'x' << yuvframe.height() << '@' << yuvframe.timestamp()
 //			  << std::endl;
 
+	// skip rendering if no connections (check each 10 frames)
+	if (_connected_attempts++ % 10 == 0) {
+		if (NDIlib_send_get_no_connections(_pNDI_send, 0) == 0) {
+			_connected = false;
+			return;
+		} else {
+			_connected = true;
+		}
+	} else if (!_connected.load()) {
+		return;
+	}
+
 	// get dimensions and crop/rotate/pad video
 	int srcWidth, srcHeight, width, height = 0;
 	rtc::scoped_refptr<webrtc::I420BufferInterface> yuvbuffer;
@@ -153,6 +166,10 @@ void NDIWriter::OnData(const void *audio_data, int bits_per_sample,
 //			  << "number_of_channels=" << number_of_channels << ", "
 //			  << "sample_rate=" << sample_rate << ", "
 //			  << "bits_per_sample=" << bits_per_sample << std::endl;
+
+	// skip rendering if no connections
+	if (!this->_connected.load())
+		return;
 
 	// Create an audio frame
 	NDIlib_audio_frame_interleaved_16s_t NDI_audio_frame;

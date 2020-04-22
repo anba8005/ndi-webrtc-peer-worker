@@ -12,6 +12,7 @@
 #endif
 
 #include <string>
+#include <atomic>
 #include "api/peer_connection_interface.h"
 #include "api/video/i420_buffer.h"
 
@@ -67,6 +68,8 @@ private:
     int _width;
     int _height;
     OutputMode _outputMode;
+    std::atomic<bool> _connected;
+    uint64_t _connected_attempts;
     //
     rtc::scoped_refptr<webrtc::VideoTrackInterface> _videoTrack;
     rtc::scoped_refptr<webrtc::AudioTrackInterface> _audioTrack;
