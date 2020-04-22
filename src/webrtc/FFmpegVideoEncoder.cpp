@@ -358,6 +358,10 @@ const char *FFmpegVideoEncoder::findEncoderName(webrtc::VideoCodecType codec_typ
             return "h264_vaapi";
         } else if (codec_type == webrtc::kVideoCodecH265) {
             return "hevc_vaapi";
+        } else if (codec_type == webrtc::kVideoCodecVP8) {
+            return "vp8_vaapi";
+        } else if (codec_type == webrtc::kVideoCodecVP9) {
+            return "vp9_vaapi";
         } else {
             return nullptr;
         }
