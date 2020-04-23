@@ -116,6 +116,11 @@ PeerFactoryContext::setConfiguration(json configuration) {
     if (!decoder.empty()) {
         this->decoderFactory->setConfiguration(decoder);
     }
+    //
+#ifdef WEBRTC_LINUX
+	auto ignore = configuration.value("ignoreNonDefaultRoutes", true);
+	networkManager->set_ignore_non_default_routes(ignore);
+#endif
 }
 
 BaseAudioDeviceModule *PeerFactoryContext::getADM() {

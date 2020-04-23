@@ -9,6 +9,8 @@
 #define NOMINMAX
 #undef min
 #undef max
+#elif linux
+#define WEBRTC_LINUX
 #endif
 #define USE_BUILTIN_SW_CODECS
 
