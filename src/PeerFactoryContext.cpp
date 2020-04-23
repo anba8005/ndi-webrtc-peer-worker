@@ -118,8 +118,8 @@ PeerFactoryContext::setConfiguration(json configuration) {
     }
     //
 #ifdef WEBRTC_LINUX
-	auto ignore = configuration.value("ignoreNonDefaultRoutes", true);
-	networkManager->set_ignore_non_default_routes(ignore);
+	auto use = configuration.value("useNonDefaultRoutes", false);
+	networkManager->set_ignore_non_default_routes(!use);
 #endif
 }
 
