@@ -20,7 +20,7 @@ WORKDIR /code/build
 
 RUN cmake -DCMAKE_BUILD_TYPE=RELEASE .. || cmake -DCMAKE_BUILD_TYPE=RELEASE ..
 
-CMD /usr/bin/make -j6
+CMD /usr/bin/make -j`nproc`
 
 
 
