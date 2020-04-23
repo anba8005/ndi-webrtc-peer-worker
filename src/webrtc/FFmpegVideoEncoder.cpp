@@ -6,6 +6,9 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 #include "third_party/libyuv/include/libyuv/planar_functions.h"
+extern "C" {
+#include "FFmpegVaapiEncode.h"
+}
 
 #define MAX_NALUS_PERFRAME 32
 #define NAL_SC_LENGTH 4
@@ -178,7 +181,6 @@ FFmpegVideoEncoder::Encode(const webrtc::VideoFrame &input_image,
         RTC_LOG(LS_ERROR) << "Error code: " << av_make_error_string(buffer, AV_ERROR_MAX_STRING_SIZE, res);
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
-
     // set ts
     hw_frame->pts = input_image.timestamp();
 
@@ -226,43 +228,56 @@ FFmpegVideoEncoder::Encode(const webrtc::VideoFrame &input_image,
         encodedFrame.SetTimestamp(packet.pts);
         encodedFrame._frameType = (packet.flags & AV_PKT_FLAG_KEY) ? webrtc::VideoFrameType::kVideoFrameKey
                                                                    : webrtc::VideoFrameType::kVideoFrameDelta;
-        //
+        // generate codec specific info
         webrtc::CodecSpecificInfo info;
         memset(&info, 0, sizeof(info));
         info.codecType = codec_type_;
+		if (codec_type_ == webrtc::kVideoCodecVP8) {
+			info.codecSpecific.VP8.nonReference = false;
+			info.codecSpecific.VP8.temporalIdx = webrtc::kNoTemporalIdx;
+			info.codecSpecific.VP8.layerSync = false;
+			info.codecSpecific.VP8.keyIdx = webrtc::kNoKeyIdx;
+		}
+
         // Generate a header describing a single fragment.
         webrtc::RTPFragmentationHeader header;
         memset(&header, 0, sizeof(header));
-
-        int32_t scPositions[MAX_NALUS_PERFRAME + 1] = {};
-        uint8_t scLengths[MAX_NALUS_PERFRAME + 1] = {};
-        int32_t scPositionsLength = 0;
-        int32_t scPosition = 0;
-        while (scPositionsLength < MAX_NALUS_PERFRAME) {
-            uint8_t sc_length = 0;
-            int32_t naluPosition = NextNaluPosition(
-                    packet.data + scPosition, packet.size - scPosition, &sc_length);
-            if (naluPosition < 0) {
-                break;
-            }
-            scPosition += naluPosition;
-            scLengths[scPositionsLength] = sc_length;
-            scPositions[scPositionsLength] = scPosition;
-            scPositionsLength++;
-            scPosition += sc_length;
-        }
-        if (scPositionsLength == 0) {
-            RTC_LOG(LS_ERROR) << "Start code is not found for codec!";
-            av_packet_unref(&packet);
-            return WEBRTC_VIDEO_CODEC_ERROR;
-        }
-        scPositions[scPositionsLength] = packet.size;
-        header.VerifyAndAllocateFragmentationHeader(scPositionsLength);
-        for (int i = 0; i < scPositionsLength; i++) {
-            header.fragmentationOffset[i] = scPositions[i] + scLengths[i];
-            header.fragmentationLength[i] =
-                    scPositions[i + 1] - header.fragmentationOffset[i];
-        }
+		if (codec_type_ == webrtc::kVideoCodecVP8) {
+			header.VerifyAndAllocateFragmentationHeader(1);
+			header.fragmentationOffset[0] = 0;
+			header.fragmentationLength[0] = encodedFrame.size();
+		} else if (codec_type_ == webrtc::kVideoCodecH264 ||
+				   codec_type_ == webrtc::kVideoCodecH265) {
+			int32_t scPositions[MAX_NALUS_PERFRAME + 1] = {};
+			uint8_t scLengths[MAX_NALUS_PERFRAME + 1] = {};
+			int32_t scPositionsLength = 0;
+			int32_t scPosition = 0;
+			while (scPositionsLength < MAX_NALUS_PERFRAME) {
+				uint8_t sc_length = 0;
+				int32_t naluPosition = NextNaluPosition(
+						packet.data + scPosition, packet.size - scPosition, &sc_length);
+				if (naluPosition < 0) {
+					break;
+				}
+				scPosition += naluPosition;
+				scLengths[scPositionsLength] = sc_length;
+				scPositions[scPositionsLength] = scPosition;
+				scPositionsLength++;
+				scPosition += sc_length;
+			}
+			if (scPositionsLength == 0) {
+				RTC_LOG(LS_ERROR) << "Start code is not found for codec!";
+				av_packet_unref(&packet);
+				return WEBRTC_VIDEO_CODEC_ERROR;
+			}
+			scPositions[scPositionsLength] = packet.size;
+			header.VerifyAndAllocateFragmentationHeader(scPositionsLength);
+			for (int i = 0; i < scPositionsLength; i++) {
+				header.fragmentationOffset[i] = scPositions[i] + scLengths[i];
+				header.fragmentationLength[i] =
+						scPositions[i + 1] - header.fragmentationOffset[i];
+			}
+		}
 
         // send
         const auto result = encoded_image_callback_->OnEncodedImage(encodedFrame, &info, &header);
@@ -294,6 +309,13 @@ void FFmpegVideoEncoder::SetRates(const webrtc::VideoEncoder::RateControlParamet
         RTC_LOG(LS_WARNING) << "Unsupported framerate (must be >= 1.0";
         return;
     }
+
+	VAAPIEncodeContext* ctx = (VAAPIEncodeContext*)av_context_->priv_data;
+    if (ctx->rc_params.bits_per_second != parameters.bitrate.get_sum_bps()) {
+		RTC_LOG(LS_INFO) << "SetRates " <<  ctx->rc_params.bits_per_second << " -> "
+		<< parameters.bitrate.get_sum_bps();
+    }
+	ctx->rc_params.bits_per_second = parameters.bitrate.get_sum_bps();
 }
 
 void FFmpegVideoEncoder::OnPacketLossRateUpdate(float packet_loss_rate) {
@@ -360,8 +382,6 @@ const char *FFmpegVideoEncoder::findEncoderName(webrtc::VideoCodecType codec_typ
             return "hevc_vaapi";
         } else if (codec_type == webrtc::kVideoCodecVP8) {
             return "vp8_vaapi";
-        } else if (codec_type == webrtc::kVideoCodecVP9) {
-            return "vp9_vaapi";
         } else {
             return nullptr;
         }
