@@ -4,7 +4,7 @@ set(EXECUTABLE_OUTPUT_PATH "bin")
 
 # WEBRTC
 IF (WIN32)
-	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-48bc4a6-linux-x64)
+	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-48bc4a6-win-x64)
 ELSE()
 	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-48bc4a6-linux-x64)
 ENDIF()
@@ -23,7 +23,7 @@ set(LIBYUV_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/libyuv/include)
 
 # FFMPEG
 IF (WIN32)
-	#
+	set(FFMPEG_CONFIG_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/ffmpeg/chromium/config/Chrome/win-msvc/x64)
 ELSE()
 	set(FFMPEG_CONFIG_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/ffmpeg/chromium/config/Chrome/linux/x64)
 ENDIF()
@@ -39,7 +39,7 @@ set(NDI_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/include)
 
 # SYSTEM
 IF (WIN32)
-	#set(NDI_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/lib/x64/Processing.NDI.Lib.x64.lib)
+	#
 ELSE()
 	set(SYSTEM_LIBS pthread dl)
 ENDIF()
@@ -53,9 +53,7 @@ ENDIF()
 
 add_definitions(-DOWT_ENABLE_H265)
 
-add_executable(
-		ndi-webrtc-peer-worker
-		src/main.cpp
+set(EXECUTABLE_COMMON src/main.cpp
 		src/PeerFactoryContext.cpp src/PeerFactoryContext.h
 		src/SetSessionDescriptionObserver.cpp src/SetSessionDescriptionObserver.h
 		src/PeerContext.cpp src/PeerContext.h
@@ -73,8 +71,18 @@ add_executable(
 		src/webrtc/CustomEncoderFactory.cpp src/webrtc/CustomEncoderFactory.h
 		src/webrtc/CodecUtils.cpp src/webrtc/CodecUtils.h
 		src/webrtc/FFmpegVideoDecoder.cpp src/webrtc/FFmpegVideoDecoder.h
-		src/webrtc/FFmpegVideoEncoder.cpp src/webrtc/FFmpegVideoEncoder.h
 		src/webrtc/FrameRateUpdater.h src/ThrottledReporter.cpp src/ThrottledReporter.h)
+
+IF (WIN32)
+	add_executable(
+			ndi-webrtc-peer-worker
+			${EXECUTABLE_COMMON})
+ELSE()
+	add_executable(
+			ndi-webrtc-peer-worker
+			${EXECUTABLE_COMMON}
+			src/webrtc/FFmpegVideoEncoder.cpp src/webrtc/FFmpegVideoEncoder.h)
+ENDIF()
 
 target_compile_options(ndi-webrtc-peer-worker PUBLIC ${COMPILE_OPTIONS})
 set_target_properties(ndi-webrtc-peer-worker PROPERTIES LINK_FLAGS_RELEASE -s)

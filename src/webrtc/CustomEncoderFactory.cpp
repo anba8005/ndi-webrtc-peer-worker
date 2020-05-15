@@ -8,7 +8,13 @@
 #include "modules/video_coding/codecs/vp9/include/vp9.h"
 #include "media/base/media_constants.h"
 #include "absl/strings/match.h"
+#ifndef WIN32
 #include "FFmpegVideoEncoder.h"
+#endif
+
+extern "C" {
+#include "libavutil/rational.h"
+}
 
 #include <iostream>
 
@@ -20,16 +26,20 @@ CustomEncoderFactory::~CustomEncoderFactory() {
 }
 
 std::unique_ptr<webrtc::VideoEncoder> CustomEncoderFactory::CreateVideoEncoder(const webrtc::SdpVideoFormat &format) {
+#ifndef WIN32
     if (hasSoftwareOverride(format.name) || hardware_type_ == CodecUtils::HW_TYPE_NONE) {
+#endif
         if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
             return webrtc::VP8Encoder::Create();
         if (absl::EqualsIgnoreCase(format.name, cricket::kVp9CodecName))
             return webrtc::VP9Encoder::Create(cricket::VideoCodec(format));
         if (absl::EqualsIgnoreCase(format.name, cricket::kH264CodecName))
             return webrtc::H264Encoder::Create(cricket::VideoCodec(format));
+#ifndef WIN32
     } else {
         return FFmpegVideoEncoder::Create(cricket::VideoCodec(format), frame_rate, hardware_type_);
     }
+#endif
     return nullptr;
 }
 
