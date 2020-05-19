@@ -16,6 +16,7 @@ public:
     enum HardwareType {
         HW_TYPE_NONE,
         HW_TYPE_VAAPI,
+        HW_TYPE_MFX
     };
 
     static webrtc::SdpVideoFormat

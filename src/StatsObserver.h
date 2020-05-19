@@ -5,12 +5,6 @@
 #ifndef NDI_WEBRTC_PEER_WORKER_STATSOBSERVER_H
 #define NDI_WEBRTC_PEER_WORKER_STATSOBSERVER_H
 
-#ifdef WIN32
-#define NOMINMAX
-#undef min
-#undef max
-#endif
-
 #include "Signaling.h"
 
 #include "api/peer_connection_interface.h"

@@ -5,12 +5,6 @@
 #ifndef GYVAITV_WEBRTC_BASEAUDIODEVICEMODULE_H
 #define GYVAITV_WEBRTC_BASEAUDIODEVICEMODULE_H
 
-#ifdef WIN32
-#define NOMINMAX
-#undef min
-#undef max
-#endif
-
 #include "rtc_base/critical_section.h"
 #include "rtc_base/message_handler.h"
 #include "api/scoped_refptr.h"

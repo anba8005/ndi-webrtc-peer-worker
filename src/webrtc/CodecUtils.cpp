@@ -55,6 +55,8 @@ webrtc::VideoCodecType CodecUtils::ConvertSdpFormatToCodecType(webrtc::SdpVideoF
 CodecUtils::HardwareType CodecUtils::ParseHardwareType(std::string type) {
     if (type == "vaapi") {
         return HW_TYPE_VAAPI;
+    } else if (type == "mfx") {
+        return HW_TYPE_MFX;
     } else {
         return HW_TYPE_NONE;
     }
@@ -64,6 +66,8 @@ std::string CodecUtils::ConvertHardwareTypeToString(CodecUtils::HardwareType typ
     switch (type) {
         case HW_TYPE_VAAPI:
             return "vaapi";
+        case HW_TYPE_MFX:
+            return "mfx";
         default:
             return "none";
     }

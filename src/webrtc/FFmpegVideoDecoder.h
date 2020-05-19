@@ -15,12 +15,6 @@
 #ifndef NDI_WEBRTC_PEER_WORKER_FFMPEGVIDEODECODER_H
 #define NDI_WEBRTC_PEER_WORKER_FFMPEGVIDEODECODER_H
 
-#ifdef WIN32
-#define NOMINMAX
-#undef min
-#undef max
-#endif
-
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavutil/hwcontext.h"

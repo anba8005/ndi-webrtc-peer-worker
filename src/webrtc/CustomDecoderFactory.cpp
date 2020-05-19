@@ -34,9 +34,7 @@ std::vector<webrtc::SdpVideoFormat> CustomDecoderFactory::GetSupportedFormats() 
 }
 
 std::unique_ptr<webrtc::VideoDecoder> CustomDecoderFactory::CreateVideoDecoder(const webrtc::SdpVideoFormat &format) {
-#ifndef WIN32
-    if (hasSoftwareOverride(format.name)) {
-#endif
+    if (hasSoftwareOverride(format.name) || hardware_type_ == CodecUtils::HW_TYPE_NONE) {
         // use internal decoder (when possible)
         if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
             return webrtc::VP8Decoder::Create();
@@ -46,7 +44,6 @@ std::unique_ptr<webrtc::VideoDecoder> CustomDecoderFactory::CreateVideoDecoder(c
             return webrtc::H264Decoder::Create();
         if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName))
             return FFmpegVideoDecoder::Create(cricket::kH265CodecName, CodecUtils::HW_TYPE_NONE);
-#ifndef WIN32
     } else {
         // use ffmpeg decoder
         if (absl::EqualsIgnoreCase(format.name, cricket::kVp8CodecName))
@@ -58,7 +55,6 @@ std::unique_ptr<webrtc::VideoDecoder> CustomDecoderFactory::CreateVideoDecoder(c
         if (absl::EqualsIgnoreCase(format.name, cricket::kH265CodecName))
             return FFmpegVideoDecoder::Create(cricket::kH265CodecName, hardware_type_);
     }
-#endif
     return nullptr;
 }
 

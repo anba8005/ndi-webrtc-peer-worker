@@ -4,12 +4,6 @@
 #ifndef GYVAITV_WEBRTC_PEERCONTEXT_H
 #define GYVAITV_WEBRTC_PEERCONTEXT_H
 
-#ifdef WIN32
-#define NOMINMAX
-#undef min
-#undef max
-#endif
-
 #include "Signaling.h"
 
 #include <string>

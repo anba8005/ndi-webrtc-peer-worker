@@ -37,6 +37,15 @@ ELSE()
 ENDIF()
 set(NDI_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/include)
 
+# libmfx
+IF (WIN32)
+	set(MFX_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/mfx/include)
+	set(MFX_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/mfx/lib/x64/libmfx.lib dxva2.lib d3d9.lib legacy_stdio_definitions.lib)
+ELSE()
+
+ENDIF()
+
+
 # SYSTEM
 IF (WIN32)
 	#
@@ -47,6 +56,7 @@ ENDIF()
 # Compile options
 IF (WIN32)
 	set(COMPILE_OPTIONS "/MT$<$<CONFIG:Debug>:d>")
+	add_definitions(-DNOMINMAX)
 ELSE()
 	#
 ENDIF()
@@ -76,6 +86,14 @@ set(EXECUTABLE_COMMON src/main.cpp
 IF (WIN32)
 	add_executable(
 			ndi-webrtc-peer-worker
+            src/webrtc/win/msdkvideoencoder.cc src/webrtc/win/msdkvideoencoder.h
+			src/webrtc/win/base_allocator.cc src/webrtc/win/base_allocator.h
+			src/webrtc/win/d3d_allocator.cc src/webrtc/win/d3d_allocator.h
+			src/webrtc/win/mediautils.cc src/webrtc/win/mediautils.h
+			src/webrtc/win/msdkvideobase.cc src/webrtc/win/msdkvideobase.h
+			src/webrtc/win/sysmem_allocator.cc src/webrtc/win/sysmem_allocator.h
+			src/webrtc/win/commontypes.h src/webrtc/win/d3dnativeframe.h
+			src/webrtc/win/msdkcommon.h
 			${EXECUTABLE_COMMON})
 ELSE()
 	add_executable(
@@ -86,7 +104,8 @@ ENDIF()
 
 target_compile_options(ndi-webrtc-peer-worker PUBLIC ${COMPILE_OPTIONS})
 set_target_properties(ndi-webrtc-peer-worker PROPERTIES LINK_FLAGS_RELEASE -s)
-target_link_libraries(ndi-webrtc-peer-worker PUBLIC ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} ${NDI_LIBS} ${SYSTEM_LIBS})
-target_include_directories(ndi-webrtc-peer-worker PUBLIC ${NDI_INCLUDE_DIR}
+target_link_libraries(ndi-webrtc-peer-worker PUBLIC ${WEBRTC_LIBRARIES} ${WEBRTC_DEPENDENCIES} ${NDI_LIBS}
+		${MFX_LIBS} ${SYSTEM_LIBS})
+target_include_directories(ndi-webrtc-peer-worker PUBLIC ${NDI_INCLUDE_DIR} ${MFX_INCLUDE_DIR}
 		${FFMPEG_INCLUDE_DIR} ${FFMPEG_CONFIG_INCLUDE_DIR} ${WEBRTC_INCLUDE_DIR} ${LIBYUV_INCLUDE_DIR}
 		${CMAKE_CURRENT_LIST_DIR}/vendor/abseil-cpp)

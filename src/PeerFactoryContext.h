@@ -5,11 +5,7 @@
 #ifndef GYVAITV_WEBRTC_PEERFACTORYCONTEXT_H
 #define GYVAITV_WEBRTC_PEERFACTORYCONTEXT_H
 
-#ifdef WIN32
-#define NOMINMAX
-#undef min
-#undef max
-#elif linux
+#ifdef linux
 #define WEBRTC_LINUX
 #endif
 #define USE_BUILTIN_SW_CODECS

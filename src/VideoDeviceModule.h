@@ -5,12 +5,6 @@
 #ifndef GYVAITV_WEBRTC_VIDEODEVICEMODULE_H
 #define GYVAITV_WEBRTC_VIDEODEVICEMODULE_H
 
-#ifdef WIN32
-#define NOMINMAX
-#undef min
-#undef max
-#endif
-
 #define _WINSOCK2API_
 #define _WINSOCKAPI_
 

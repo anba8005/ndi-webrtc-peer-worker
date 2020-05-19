@@ -5,12 +5,6 @@
 #ifndef NDI_WEBRTC_PEER_WORKER_CUSTOMENCODERFACTORY_H
 #define NDI_WEBRTC_PEER_WORKER_CUSTOMENCODERFACTORY_H
 
-#ifdef WIN32
-#define NOMINMAX
-#undef min
-#undef max
-#endif
-
 #include "CodecUtils.h"
 #include "FrameRateUpdater.h"
 #include <vector>
