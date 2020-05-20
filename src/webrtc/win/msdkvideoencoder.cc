@@ -174,7 +174,8 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
   m_mfxEncParams.mfx.TargetUsage = MFX_TARGETUSAGE_BALANCED;
   m_mfxEncParams.mfx.TargetKbps = codec_settings->maxBitrate;  // in-kbps
   m_mfxEncParams.mfx.MaxKbps = codec_settings->maxBitrate;
-  m_mfxEncParams.mfx.RateControlMethod = MFX_RATECONTROL_VBR;
+  m_mfxEncParams.mfx.RateControlMethod = MFX_RATECONTROL_CBR;
+  m_mfxEncParams.mfx.BRCParamMultiplier = 1;
   m_mfxEncParams.mfx.NumSlice = 0;
   if (frame_rate_ > 0) {
     AVRational fps = av_d2q(frame_rate_, 65535);
@@ -191,6 +192,7 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
   m_mfxEncParams.mfx.GopOptFlag = 0;
   m_mfxEncParams.mfx.IdrInterval = 0;
   m_mfxEncParams.IOPattern = MFX_IOPATTERN_IN_SYSTEM_MEMORY;
+  m_mfxEncParams.mfx.LowPower = MFX_CODINGOPTION_OFF;
 
   // Frame info parameters
   m_mfxEncParams.mfx.FrameInfo.FourCC = MFX_FOURCC_NV12;
@@ -529,7 +531,7 @@ retry:
     return WEBRTC_VIDEO_CODEC_OK;
   }
 
-  sts = m_mfxSession->SyncOperation(sync, MSDK_ENC_WAIT_INTERVAL);
+  sts = m_mfxSession->SyncOperation(sync, INFINITE);
   if (MFX_ERR_NONE != sts) {
     if (pbsData != nullptr) {
       delete[] pbsData;
