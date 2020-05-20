@@ -90,7 +90,7 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
     AVRational fps = frame_rate_ > 0 ? av_d2q(frame_rate_, 65535) : DEFAULT_FPS;
     av_context_->framerate = fps;
     av_context_->max_b_frames = 0;
-    av_context_->gop_size = 100;
+    av_context_->gop_size = 250;
     av_context_->bit_rate = codec_settings->maxBitrate * 1000;
     AVDictionary *opts = NULL;
     av_dict_set(&opts, "rc_mode", "CBR", 0);
