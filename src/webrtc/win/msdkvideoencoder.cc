@@ -31,7 +31,7 @@ using namespace rtc;
 namespace owt {
 namespace base {
 
-MSDKVideoEncoder::MSDKVideoEncoder(double frame_rate)
+MSDKVideoEncoder::MSDKVideoEncoder(const cricket::VideoCodec &codec, double frame_rate)
     : callback_(nullptr),
       bitrate_(0),
       width_(0),
@@ -42,6 +42,7 @@ MSDKVideoEncoder::MSDKVideoEncoder(double frame_rate)
   m_pmfxENC = nullptr;
   m_pEncSurfaces = nullptr;
   m_nFramesProcessed = 0;
+  coder_profile_level_ = webrtc::H264::ParseSdpProfileLevelId(codec.params);
   encoder_thread_->SetName("MSDKVideoEncoderThread", NULL);
   RTC_CHECK(encoder_thread_->Start())
       << "Failed to start encoder thread for MSDK encoder";
@@ -91,41 +92,13 @@ int MSDKVideoEncoder::InitEncode(const webrtc::VideoCodec* codec_settings,
                 codec_settings, number_of_cores, max_payload_size));
 }
 
-mfxStatus MSDKConvertFrameRate(mfxF64 dFrameRate,
-                               mfxU32* pnFrameRateExtN,
-                               mfxU32* pnFrameRateExtD) {
-  mfxU32 fr;
-  fr = (mfxU32)(dFrameRate + 0.5);
-
-  if (fabs(fr - dFrameRate) < 0.0001) {
-    *pnFrameRateExtN = fr;
-    *pnFrameRateExtD = 1;
-    return MFX_ERR_NONE;
-  }
-
-  fr = (mfxU32)(dFrameRate * 1.001 + 0.5);
-
-  if (fabs(fr * 1000 - dFrameRate * 1001) < 10) {
-    *pnFrameRateExtN = fr * 1000;
-    *pnFrameRateExtD = 1001;
-    return MFX_ERR_NONE;
-  }
-
-  *pnFrameRateExtN = (mfxU32)(dFrameRate * 10000 + .5);
-  *pnFrameRateExtD = 10000;
-
-  return MFX_ERR_NONE;
-}
-
 int MSDKVideoEncoder::InitEncodeOnEncoderThread(
     const webrtc::VideoCodec* codec_settings,
     int number_of_cores,
     size_t max_payload_size) {
   mfxStatus sts;
-  RTC_LOG(LS_ERROR) << "InitEncodeOnEncoderThread: maxBitrate:"
-                    << codec_settings->maxBitrate
-                    << "framerate:" << codec_settings->maxFramerate
-                    << "targetBitRate:" << codec_settings->maxBitrate;
+  RTC_LOG(LS_ERROR) << "InitEncodeOnEncoderThread: targetBitrate:"
+                    << codec_settings->maxBitrate;
   uint32_t codec_id = MFX_CODEC_AVC;
   // If already inited, what we need to do is to reset the encoder,
   // instead of setting it all over again.
@@ -187,12 +160,16 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
     m_mfxEncParams.mfx.FrameInfo.FrameRateExtD = 1;
   }
   m_mfxEncParams.mfx.EncodedOrder = 0;
-  m_mfxEncParams.mfx.GopPicSize = 100;
+  m_mfxEncParams.mfx.GopPicSize = 250;
   m_mfxEncParams.mfx.GopRefDist = 1;
   m_mfxEncParams.mfx.GopOptFlag = 0;
   m_mfxEncParams.mfx.IdrInterval = 0;
   m_mfxEncParams.IOPattern = MFX_IOPATTERN_IN_SYSTEM_MEMORY;
   m_mfxEncParams.mfx.LowPower = MFX_CODINGOPTION_OFF;
+  m_mfxEncParams.mfx.CodecLevel = getCodecLevel();
+  m_mfxEncParams.mfx.CodecProfile = getCodecProfile();
+
+  RTC_LOG(LS_ERROR) << m_mfxEncParams.mfx.CodecLevel << " -> " << m_mfxEncParams.mfx.CodecProfile;
 
   // Frame info parameters
   m_mfxEncParams.mfx.FrameInfo.FourCC = MFX_FOURCC_NV12;
@@ -217,6 +194,7 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
   extendedCodingOptions.AUDelimiter = MFX_CODINGOPTION_OFF;
   extendedCodingOptions.PicTimingSEI = MFX_CODINGOPTION_OFF;
   extendedCodingOptions.VuiNalHrdParameters = MFX_CODINGOPTION_OFF;
+  extendedCodingOptions.NalHrdConformance = MFX_CODINGOPTION_OFF;
   mfxExtCodingOption2 extendedCodingOptions2;
   MSDK_ZERO_MEMORY(extendedCodingOptions2);
   extendedCodingOptions2.Header.BufferId = MFX_EXTBUFF_CODING_OPTION2;
@@ -653,6 +631,26 @@ void MSDKVideoEncoder::SetRates(const RateControlParameters& parameters) {
     RTC_LOG(LS_WARNING) << "Unsupported framerate (must be >= 1.0";
     return;
   }
+
+  mfxVideoParam param;
+  MSDK_ZERO_MEMORY(param);
+  mfxStatus sts = m_pmfxENC->GetVideoParam(&param);
+  if (MFX_ERR_NONE != sts) {
+    RTC_LOG(LS_ERROR) << "SetRates() Error getting params";
+    return;
+  }
+
+  uint32_t targetKbps = parameters.bitrate.get_sum_bps() / 1000;
+  if (param.mfx.TargetKbps != targetKbps) {
+      RTC_LOG(LS_INFO) << "SetRates " <<  param.mfx.TargetKbps << " -> " << targetKbps;
+      param.mfx.TargetKbps = targetKbps;
+      param.mfx.MaxKbps = targetKbps;
+      sts = m_pmfxENC->Reset(&param);
+      if (MFX_ERR_NONE != sts) {
+        RTC_LOG(LS_ERROR) << "SetRates() Error updating params";
+        return;
+      }
+  }
 }
 
 void MSDKVideoEncoder::OnPacketLossRateUpdate(float packet_loss_rate) {
@@ -749,9 +747,48 @@ int32_t MSDKVideoEncoder::NextNaluPosition(uint8_t* buffer,
   return -1;
 }
 
+int MSDKVideoEncoder::getCodecProfile() {
+  if (codecType_ == webrtc::kVideoCodecH264) {
+    if (coder_profile_level_.has_value()) {
+      switch (coder_profile_level_->profile) {
+        case webrtc::H264::kProfileHigh:
+        case webrtc::H264::kProfileConstrainedHigh:
+          return MFX_PROFILE_AVC_HIGH;
+        case webrtc::H264::kProfileBaseline:
+        case webrtc::H264::kProfileConstrainedBaseline:
+          return MFX_PROFILE_AVC_CONSTRAINED_BASELINE;
+        case webrtc::H264::kProfileMain:
+          return MFX_PROFILE_AVC_MAIN;
+        default:
+          return MFX_PROFILE_AVC_CONSTRAINED_BASELINE;
+        }
+    } else {
+      return MFX_PROFILE_AVC_CONSTRAINED_BASELINE; // DEFAULT
+    }
+  } else if (codecType_ == webrtc::kVideoCodecH265) {
+    return MFX_PROFILE_HEVC_MAIN;
+  } else {
+    return MFX_PROFILE_UNKNOWN;
+  }
+}
+
+int MSDKVideoEncoder::getCodecLevel() {
+  if (codecType_ == webrtc::kVideoCodecH264) {
+    if (coder_profile_level_.has_value()) {
+      return coder_profile_level_->level;
+    } else {
+      return MFX_LEVEL_AVC_31; // DEFAULT
+    }
+  } else if (codecType_ == webrtc::kVideoCodecH265) {
+    return MFX_LEVEL_HEVC_31;
+  } else {
+    return -1;
+  }
+}
+
 std::unique_ptr<MSDKVideoEncoder> MSDKVideoEncoder::Create(
     cricket::VideoCodec format, double frame_rate) {
-  return absl::make_unique<MSDKVideoEncoder>(frame_rate);
+  return absl::make_unique<MSDKVideoEncoder>(format, frame_rate);
 }
 
 }  // namespace base

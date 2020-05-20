@@ -14,6 +14,7 @@
 #include "media/base/codec.h"
 #include "modules/video_coding/codecs/h264/include/h264.h"
 #include "rtc_base/thread.h"
+#include "media/base/h264_profile_level_id.h"
 
 namespace owt {
 namespace base {
@@ -25,7 +26,7 @@ enum MemType {
 
 class MSDKVideoEncoder : public webrtc::VideoEncoder {
  public:
-  explicit MSDKVideoEncoder(double frame_rate);
+  explicit MSDKVideoEncoder(const cricket::VideoCodec &codec, double frame_rate);
   virtual ~MSDKVideoEncoder();
 
   static std::unique_ptr<MSDKVideoEncoder> Create(cricket::VideoCodec format, double frame_rate);
@@ -54,6 +55,8 @@ class MSDKVideoEncoder : public webrtc::VideoEncoder {
   mfxU16 MSDKGetFreeSurfaceIndex(mfxFrameSurface1* pSurfacesPool,
                                  mfxU16 nPoolSize);
   void WipeMfxBitstream(mfxBitstream* pBitstream);
+  int getCodecProfile();
+  int getCodecLevel();
 
   webrtc::EncodedImageCallback* callback_;
   int32_t bitrate_;  // Bitrate in bits per second.
@@ -61,6 +64,7 @@ class MSDKVideoEncoder : public webrtc::VideoEncoder {
   int32_t height_;
   webrtc::VideoCodecType codecType_;
   double frame_rate_;
+  absl::optional<webrtc::H264::ProfileLevelId> coder_profile_level_;
 
   MFXVideoSession* m_mfxSession;
   mfxPluginUID m_pluginID;
