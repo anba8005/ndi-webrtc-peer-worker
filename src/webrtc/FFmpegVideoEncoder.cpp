@@ -59,14 +59,16 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
     height_ = codec_settings->height;
 
     // init HW device
-    auto hardware_type_str = CodecUtils::ConvertHardwareTypeToString(hardware_type_);
-    AVHWDeviceType type = findHWDeviceType(hardware_type_str.c_str());
-    if (type == AV_HWDEVICE_TYPE_NONE || !createHWContext(type)) {
-        return WEBRTC_VIDEO_CODEC_ERROR;
+    if (isDeviceNeeded()) {
+	    auto hardware_type_str = CodecUtils::ConvertHardwareTypeToString(hardware_type_);
+	    AVHWDeviceType type = findHWDeviceType(hardware_type_str.c_str());
+	    if (type == AV_HWDEVICE_TYPE_NONE || !createHWContext(type)) {
+		    return WEBRTC_VIDEO_CODEC_ERROR;
+	    }
     }
 
     // find codec name
-    const char *codec_name = findEncoderName(codec_type_, type);
+    const char *codec_name = findEncoderName(codec_type_);
     if (!codec_name) {
         RTC_LOG(LS_ERROR) << "Device/codec type combination is not supported";
         Release();
@@ -87,13 +89,14 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
     av_context_->height = height_;
     av_context_->time_base = (AVRational) {1, 90000};
     av_context_->sample_aspect_ratio = (AVRational) {1, 1};
-    av_context_->pix_fmt = getPixelFormat();
+    av_context_->pix_fmt = getDevicePixelFormat();
     // fill configuration
     AVRational fps = frame_rate_ > 0 ? av_d2q(frame_rate_, 65535) : DEFAULT_FPS;
     av_context_->framerate = fps;
     av_context_->max_b_frames = 0;
     av_context_->gop_size = 250;
     av_context_->bit_rate = codec_settings->maxBitrate * 1000;
+	av_context_->rc_max_rate = codec_settings->maxBitrate * 1000;
     AVDictionary *opts = NULL;
     av_dict_set(&opts, "rc_mode", "CBR", 0);
     //
@@ -108,11 +111,12 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
     }
 
     /* set hw_frames_ctx for encoder's AVCodecContext */
-    if (setHWFrameContext(av_context_.get(), hw_context_.get(), width_, height_) < 0) {
-        RTC_LOG(LS_ERROR) << "Failed to set hwframe context";
-        Release();
-        return WEBRTC_VIDEO_CODEC_ERROR;
-
+    if (isDeviceNeeded()) {
+	    if (setHWFrameContext(av_context_.get(), hw_context_.get(), width_, height_) < 0) {
+		    RTC_LOG(LS_ERROR) << "Failed to set hwframe context";
+		    Release();
+		    return WEBRTC_VIDEO_CODEC_ERROR;
+	    }
     }
 
     // open codec
@@ -128,7 +132,7 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
     RTC_CHECK(av_frame_.get());
     av_frame_->width = width_;
     av_frame_->height = height_;
-    av_frame_->format = AV_PIX_FMT_NV12;
+    av_frame_->format = getFramePixelFormat();
     res = av_frame_get_buffer(av_frame_.get(), 32);
     if (res < 0) {
         RTC_LOG(LS_ERROR) << "av_frame_get_buffer error: " << res;
@@ -159,30 +163,46 @@ FFmpegVideoEncoder::Encode(const webrtc::VideoFrame &input_image,
 
     // convert input image to nv12
     rtc::scoped_refptr<webrtc::I420BufferInterface> buffer(input_image.video_frame_buffer()->ToI420());
-    int res = libyuv::I420ToNV12(buffer->DataY(), buffer->StrideY(), buffer->DataU(), buffer->StrideU(),
-                                 buffer->DataV(),
-                                 buffer->StrideV(), av_frame_->data[0], av_frame_->linesize[0], av_frame_->data[1],
-                                 av_frame_->linesize[1], width_, height_);
-    if (res != 0) {
-        RTC_LOG(LS_ERROR) << "I420ToNV12 error";
-        return WEBRTC_VIDEO_CODEC_ERROR;
+    if (getFramePixelFormat() != AV_PIX_FMT_YUV420P) {
+	    int res = libyuv::I420ToNV12(buffer->DataY(), buffer->StrideY(), buffer->DataU(), buffer->StrideU(),
+	                             buffer->DataV(),
+	                             buffer->StrideV(), av_frame_->data[0], av_frame_->linesize[0], av_frame_->data[1],
+	                             av_frame_->linesize[1], width_, height_);
+	    if (res != 0) {
+		    RTC_LOG(LS_ERROR) << "I420ToNV12 error";
+		    return WEBRTC_VIDEO_CODEC_ERROR;
+	    }
     }
 
     // get & fill hw frame
     std::unique_ptr<AVFrame, AVFrameDeleter> hw_frame(av_frame_alloc());
-    res = av_hwframe_get_buffer(av_context_->hw_frames_ctx, hw_frame.get(), 0);
-    if (res < 0) {
-        RTC_LOG(LS_ERROR) << "av_hwframe_get_buffer error";
-        char buffer[AV_ERROR_MAX_STRING_SIZE];
-        RTC_LOG(LS_ERROR) << "Error code: " << av_make_error_string(buffer, AV_ERROR_MAX_STRING_SIZE, res);
-        return WEBRTC_VIDEO_CODEC_ERROR;
-    }
-    res = av_hwframe_transfer_data(hw_frame.get(), av_frame_.get(), 0);
-    if (res < 0) {
-        RTC_LOG(LS_ERROR) << "av_hwframe_transfer_data error";
-        char buffer[AV_ERROR_MAX_STRING_SIZE];
-        RTC_LOG(LS_ERROR) << "Error code: " << av_make_error_string(buffer, AV_ERROR_MAX_STRING_SIZE, res);
-        return WEBRTC_VIDEO_CODEC_ERROR;
+    if (isDeviceNeeded()) {
+    	// fill hw frame
+	    int res = av_hwframe_get_buffer(av_context_->hw_frames_ctx, hw_frame.get(), 0);
+	    if (res < 0) {
+		    RTC_LOG(LS_ERROR) << "av_hwframe_get_buffer error";
+		    char buffer[AV_ERROR_MAX_STRING_SIZE];
+		    RTC_LOG(LS_ERROR) << "Error code: " << av_make_error_string(buffer, AV_ERROR_MAX_STRING_SIZE, res);
+		    return WEBRTC_VIDEO_CODEC_ERROR;
+	    }
+	    res = av_hwframe_transfer_data(hw_frame.get(), av_frame_.get(), 0);
+	    if (res < 0) {
+		    RTC_LOG(LS_ERROR) << "av_hwframe_transfer_data error";
+		    char buffer[AV_ERROR_MAX_STRING_SIZE];
+		    RTC_LOG(LS_ERROR) << "Error code: " << av_make_error_string(buffer, AV_ERROR_MAX_STRING_SIZE, res);
+		    return WEBRTC_VIDEO_CODEC_ERROR;
+	    }
+    } else {
+    	// just copy buffer
+    	hw_frame->data[0] = (uint8_t *) buffer->DataY();
+	    hw_frame->data[1] = (uint8_t *) buffer->DataU();
+	    hw_frame->data[2] = (uint8_t *) buffer->DataV();
+	    hw_frame->linesize[0] = buffer->StrideY();
+	    hw_frame->linesize[1] = buffer->StrideU();
+	    hw_frame->linesize[2] = buffer->StrideV();
+	    hw_frame->width = width_;
+	    hw_frame->height = height_;
+	    hw_frame->format = getFramePixelFormat();
     }
     // set ts
     hw_frame->pts = input_image.timestamp();
@@ -204,7 +224,7 @@ FFmpegVideoEncoder::Encode(const webrtc::VideoFrame &input_image,
     packet.size = 0;
 
     // send frame
-    res = avcodec_send_frame(av_context_.get(), hw_frame.get());
+    int res = avcodec_send_frame(av_context_.get(), hw_frame.get());
     if (res < 0) {
         RTC_LOG(LS_ERROR) << "avcodec_send_frame error";
         char buffer[AV_ERROR_MAX_STRING_SIZE];
@@ -378,8 +398,8 @@ bool FFmpegVideoEncoder::createHWContext(AVHWDeviceType type) {
     return true;
 }
 
-const char *FFmpegVideoEncoder::findEncoderName(webrtc::VideoCodecType codec_type, AVHWDeviceType device_type) {
-    if (device_type == AV_HWDEVICE_TYPE_VAAPI) {
+const char *FFmpegVideoEncoder::findEncoderName(webrtc::VideoCodecType codec_type) {
+    if (hardware_type_ == CodecUtils::HW_TYPE_VAAPI) {
         if (codec_type == webrtc::kVideoCodecH264) {
             return "h264_vaapi";
         } else if (codec_type == webrtc::kVideoCodecH265) {
@@ -389,7 +409,7 @@ const char *FFmpegVideoEncoder::findEncoderName(webrtc::VideoCodecType codec_typ
         } else {
             return nullptr;
         }
-    } else if (device_type == AV_HWDEVICE_TYPE_VIDEOTOOLBOX) {
+    } else if (hardware_type_ == CodecUtils::HW_TYPE_VIDEOTOOLBOX) {
 	    if (codec_type == webrtc::kVideoCodecH264) {
 		    return "h264_videotoolbox";
 	    } else if (codec_type == webrtc::kVideoCodecH265) {
@@ -427,8 +447,8 @@ int FFmpegVideoEncoder::setHWFrameContext(AVCodecContext *ctx, AVBufferRef *hw_d
         return -1;
     }
     frames_ctx = (AVHWFramesContext *) (hw_frames_ref->data);
-    frames_ctx->format = getPixelFormat();
-    frames_ctx->sw_format = AV_PIX_FMT_NV12;
+    frames_ctx->format = getDevicePixelFormat();
+    frames_ctx->sw_format = getFramePixelFormat();
     frames_ctx->width = width;
     frames_ctx->height = height;
     frames_ctx->initial_pool_size = 20;
@@ -481,15 +501,32 @@ int32_t FFmpegVideoEncoder::NextNaluPosition(uint8_t *buffer, size_t buffer_size
     return -1;
 }
 
-AVPixelFormat FFmpegVideoEncoder::getPixelFormat() {
+AVPixelFormat FFmpegVideoEncoder::getDevicePixelFormat() {
 	if (hardware_type_ == CodecUtils::HW_TYPE_VAAPI) {
 		return AV_PIX_FMT_VAAPI;
 	} else if (hardware_type_ == CodecUtils::HW_TYPE_VIDEOTOOLBOX) {
-		return AV_PIX_FMT_VIDEOTOOLBOX;
+		return AV_PIX_FMT_YUV420P;
 	} else {
 		return AV_PIX_FMT_NONE;
 	}
+}
 
+AVPixelFormat FFmpegVideoEncoder::getFramePixelFormat() {
+	if (hardware_type_ == CodecUtils::HW_TYPE_VAAPI) {
+		return AV_PIX_FMT_NV12;
+	} else if (hardware_type_ == CodecUtils::HW_TYPE_VIDEOTOOLBOX) {
+		return AV_PIX_FMT_YUV420P;
+	} else {
+		return AV_PIX_FMT_NONE;
+	}
+}
+
+bool FFmpegVideoEncoder::isDeviceNeeded() {
+	if (hardware_type_ == CodecUtils::HW_TYPE_VAAPI) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
 int FFmpegVideoEncoder::getCodecProfile() {

@@ -73,11 +73,15 @@ private:
 
     AVHWDeviceType findHWDeviceType(const char *name);
 
-    AVPixelFormat getPixelFormat();
+    AVPixelFormat getDevicePixelFormat();
+
+	AVPixelFormat getFramePixelFormat();
+
+	bool isDeviceNeeded();
 
     bool createHWContext(AVHWDeviceType type);
 
-    const char *findEncoderName(webrtc::VideoCodecType codec_type, AVHWDeviceType device_type);
+    const char *findEncoderName(webrtc::VideoCodecType codec_type);
 
     webrtc::VideoCodecType findCodecType(std::string name);
 

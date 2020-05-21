@@ -105,7 +105,11 @@ PeerFactoryContext::setConfiguration(json configuration) {
         }
     }
     //
+#ifdef WEBRTC_MAC
+	config.set_cpu_adaptation(false); // videotoolbox keeps stepping down
+#else
     config.set_cpu_adaptation(configuration.value("cpuAdaptation", true));
+#endif
     //
     const json encoder = configuration["encoder"];
     if (!encoder.empty()) {
