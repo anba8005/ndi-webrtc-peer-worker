@@ -6,9 +6,11 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 #include "third_party/libyuv/include/libyuv/planar_functions.h"
+#ifdef linux
 extern "C" {
 #include "FFmpegVaapiEncode.h"
 }
+#endif
 
 #define MAX_NALUS_PERFRAME 32
 #define NAL_SC_LENGTH 4
@@ -85,7 +87,7 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
     av_context_->height = height_;
     av_context_->time_base = (AVRational) {1, 90000};
     av_context_->sample_aspect_ratio = (AVRational) {1, 1};
-    av_context_->pix_fmt = AV_PIX_FMT_VAAPI;
+    av_context_->pix_fmt = getPixelFormat();
     // fill configuration
     AVRational fps = frame_rate_ > 0 ? av_d2q(frame_rate_, 65535) : DEFAULT_FPS;
     av_context_->framerate = fps;
@@ -106,10 +108,11 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
     }
 
     /* set hw_frames_ctx for encoder's AVCodecContext */
-    if (!setHWFrameContext(av_context_.get(), hw_context_.get(), width_, height_) < 0) {
+    if (setHWFrameContext(av_context_.get(), hw_context_.get(), width_, height_) < 0) {
         RTC_LOG(LS_ERROR) << "Failed to set hwframe context";
         Release();
         return WEBRTC_VIDEO_CODEC_ERROR;
+
     }
 
     // open codec
@@ -309,13 +312,14 @@ void FFmpegVideoEncoder::SetRates(const webrtc::VideoEncoder::RateControlParamet
         RTC_LOG(LS_WARNING) << "Unsupported framerate (must be >= 1.0";
         return;
     }
-
+#ifdef linux
 	VAAPIEncodeContext* ctx = (VAAPIEncodeContext*)av_context_->priv_data;
     if (ctx->rc_params.bits_per_second != parameters.bitrate.get_sum_bps()) {
 		RTC_LOG(LS_INFO) << "SetRates " <<  ctx->rc_params.bits_per_second << " -> "
 		<< parameters.bitrate.get_sum_bps();
     }
 	ctx->rc_params.bits_per_second = parameters.bitrate.get_sum_bps();
+#endif
 }
 
 void FFmpegVideoEncoder::OnPacketLossRateUpdate(float packet_loss_rate) {
@@ -385,6 +389,14 @@ const char *FFmpegVideoEncoder::findEncoderName(webrtc::VideoCodecType codec_typ
         } else {
             return nullptr;
         }
+    } else if (device_type == AV_HWDEVICE_TYPE_VIDEOTOOLBOX) {
+	    if (codec_type == webrtc::kVideoCodecH264) {
+		    return "h264_videotoolbox";
+	    } else if (codec_type == webrtc::kVideoCodecH265) {
+		    return "hevc_videotoolbox";
+	    } else {
+		    return nullptr;
+	    }
     } else {
         return nullptr;
     }
@@ -411,17 +423,17 @@ int FFmpegVideoEncoder::setHWFrameContext(AVCodecContext *ctx, AVBufferRef *hw_d
     int err = 0;
 
     if (!(hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx))) {
-        RTC_LOG(LS_ERROR) << "Failed to create VAAPI frame context";
+        RTC_LOG(LS_ERROR) << "Failed to create hardware frame context";
         return -1;
     }
     frames_ctx = (AVHWFramesContext *) (hw_frames_ref->data);
-    frames_ctx->format = AV_PIX_FMT_VAAPI;
+    frames_ctx->format = getPixelFormat();
     frames_ctx->sw_format = AV_PIX_FMT_NV12;
     frames_ctx->width = width;
     frames_ctx->height = height;
     frames_ctx->initial_pool_size = 20;
     if ((err = av_hwframe_ctx_init(hw_frames_ref)) < 0) {
-        RTC_LOG(LS_ERROR) << "Failed to initialize VAAPI frame context";
+        RTC_LOG(LS_ERROR) << "Failed to initialize hardware frame context";
         char buffer[AV_ERROR_MAX_STRING_SIZE];
         RTC_LOG(LS_ERROR) << "Error code: " << av_make_error_string(buffer, AV_ERROR_MAX_STRING_SIZE, err);
         av_buffer_unref(&hw_frames_ref);
@@ -467,6 +479,17 @@ int32_t FFmpegVideoEncoder::NextNaluPosition(uint8_t *buffer, size_t buffer_size
         return (int32_t) (head - buffer);
     }
     return -1;
+}
+
+AVPixelFormat FFmpegVideoEncoder::getPixelFormat() {
+	if (hardware_type_ == CodecUtils::HW_TYPE_VAAPI) {
+		return AV_PIX_FMT_VAAPI;
+	} else if (hardware_type_ == CodecUtils::HW_TYPE_VIDEOTOOLBOX) {
+		return AV_PIX_FMT_VIDEOTOOLBOX;
+	} else {
+		return AV_PIX_FMT_NONE;
+	}
+
 }
 
 int FFmpegVideoEncoder::getCodecProfile() {

@@ -5,6 +5,8 @@ set(EXECUTABLE_OUTPUT_PATH "bin")
 # WEBRTC
 IF (WIN32)
 	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-48bc4a6-win-x64)
+ELSEIF(APPLE)
+	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-48bc4a6-mac-x64)
 ELSE()
 	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-48bc4a6-linux-x64)
 ENDIF()
@@ -24,6 +26,8 @@ set(LIBYUV_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/libyuv/include)
 # FFMPEG
 IF (WIN32)
 	set(FFMPEG_CONFIG_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/ffmpeg/chromium/config/Chrome/win-msvc/x64)
+ELSEIF(APPLE)
+	set(FFMPEG_CONFIG_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/ffmpeg/chromium/config/Chrome/mac/x64)
 ELSE()
 	set(FFMPEG_CONFIG_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/ffmpeg/chromium/config/Chrome/linux/x64)
 ENDIF()
@@ -32,6 +36,8 @@ set(FFMPEG_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/ffmpeg)
 # NDI
 IF (WIN32)
 	set(NDI_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/lib/x64/Processing.NDI.Lib.x64.lib)
+ELSEIF(APPLE)
+	set(NDI_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/lib/x64/libndi.4.dylib)
 ELSE()
 	set(NDI_LIBS ndi)
 ENDIF()
@@ -42,13 +48,15 @@ IF (WIN32)
 	set(MFX_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/mfx/include)
 	set(MFX_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/mfx/lib/x64/libmfx.lib dxva2.lib d3d9.lib legacy_stdio_definitions.lib)
 ELSE()
-
+	#
 ENDIF()
 
 
 # SYSTEM
 IF (WIN32)
 	#
+ELSEIF(APPLE)
+	set(SYSTEM_LIBS stdc++)
 ELSE()
 	set(SYSTEM_LIBS pthread dl)
 ENDIF()
@@ -57,6 +65,8 @@ ENDIF()
 IF (WIN32)
 	set(COMPILE_OPTIONS "/MT$<$<CONFIG:Debug>:d>")
 	add_definitions(-DNOMINMAX)
+ELSEIF(APPLE)
+	set(COMPILE_OPTIONS "-fvisibility=hidden" "-fvisibility-inlines-hidden" -O2)
 ELSE()
 	#
 ENDIF()

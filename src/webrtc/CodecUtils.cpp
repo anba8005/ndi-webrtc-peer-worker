@@ -57,7 +57,9 @@ CodecUtils::HardwareType CodecUtils::ParseHardwareType(std::string type) {
         return HW_TYPE_VAAPI;
     } else if (type == "mfx") {
         return HW_TYPE_MFX;
-    } else {
+    } else if (type == "videotoolbox") {
+		return HW_TYPE_VIDEOTOOLBOX;
+	} else {
         return HW_TYPE_NONE;
     }
 }
@@ -68,6 +70,8 @@ std::string CodecUtils::ConvertHardwareTypeToString(CodecUtils::HardwareType typ
             return "vaapi";
         case HW_TYPE_MFX:
             return "mfx";
+	    case HW_TYPE_VIDEOTOOLBOX:
+		    return "videotoolbox";
         default:
             return "none";
     }
