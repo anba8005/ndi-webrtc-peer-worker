@@ -19,9 +19,7 @@ extern "C" {
 FFmpegVideoEncoder::FFmpegVideoEncoder(const cricket::VideoCodec &codec, double frame_rate,
                                        CodecUtils::HardwareType hardware_type) : encoded_image_callback_(
         nullptr),
-                                                                                 width_(0),
                                                                                  hardware_type_(hardware_type),
-                                                                                 height_(0),
                                                                                  frame_rate_(frame_rate) {
     codec_type_ = findCodecType(codec.name);
     coder_profile_level_ = webrtc::H264::ParseSdpProfileLevelId(codec.params);
@@ -55,8 +53,8 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
     RTC_DCHECK(!av_context_);
 
     // Save dimensions
-    width_ = codec_settings->width;
-    height_ = codec_settings->height;
+    int width = codec_settings->width;
+    int height = codec_settings->height;
 
     // init HW device
     if (isDeviceNeeded()) {
@@ -85,8 +83,8 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
 
     // Initialize AVCodecContext.
     av_context_.reset(avcodec_alloc_context3(codec));
-    av_context_->width = width_;
-    av_context_->height = height_;
+    av_context_->width = width;
+    av_context_->height = height;
     av_context_->time_base = (AVRational) {1, 90000};
     av_context_->sample_aspect_ratio = (AVRational) {1, 1};
     av_context_->pix_fmt = getDevicePixelFormat();
@@ -112,7 +110,7 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
 
     /* set hw_frames_ctx for encoder's AVCodecContext */
     if (isDeviceNeeded()) {
-	    if (setHWFrameContext(av_context_.get(), hw_context_.get(), width_, height_) < 0) {
+	    if (setHWFrameContext(av_context_.get(), hw_context_.get(), width, height) < 0) {
 		    RTC_LOG(LS_ERROR) << "Failed to set hwframe context";
 		    Release();
 		    return WEBRTC_VIDEO_CODEC_ERROR;
@@ -127,18 +125,6 @@ FFmpegVideoEncoder::InitEncode(const webrtc::VideoCodec *codec_settings, int num
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
 
-    // alloc frame
-    av_frame_.reset(av_frame_alloc());
-    RTC_CHECK(av_frame_.get());
-    av_frame_->width = width_;
-    av_frame_->height = height_;
-    av_frame_->format = getFramePixelFormat();
-    res = av_frame_get_buffer(av_frame_.get(), 32);
-    if (res < 0) {
-        RTC_LOG(LS_ERROR) << "av_frame_get_buffer error: " << res;
-        Release();
-        return WEBRTC_VIDEO_CODEC_ERROR;
-    }
     return WEBRTC_VIDEO_CODEC_OK;
 }
 
@@ -164,10 +150,26 @@ FFmpegVideoEncoder::Encode(const webrtc::VideoFrame &input_image,
     // convert input image to nv12
     rtc::scoped_refptr<webrtc::I420BufferInterface> buffer(input_image.video_frame_buffer()->ToI420());
     if (getFramePixelFormat() != AV_PIX_FMT_YUV420P) {
+    	// check/alloc frame
+	    if (!av_frame_ || av_frame_->width != input_image.width() || av_frame_->height != input_image.height()) {
+		    RTC_LOG(LS_ERROR) << "Allocating AVFrame ";
+		    av_frame_.reset(av_frame_alloc());
+		    RTC_CHECK(av_frame_.get());
+		    av_frame_->width = input_image.width();
+		    av_frame_->height = input_image.height();
+		    av_frame_->format = getFramePixelFormat();
+		    int res = av_frame_get_buffer(av_frame_.get(), 32);
+		    if (res < 0) {
+			    RTC_LOG(LS_ERROR) << "av_frame_get_buffer error: " << res;
+			    Release();
+			    return WEBRTC_VIDEO_CODEC_ERROR;
+		    }
+	    }
+	    // perform conversion
 	    int res = libyuv::I420ToNV12(buffer->DataY(), buffer->StrideY(), buffer->DataU(), buffer->StrideU(),
 	                             buffer->DataV(),
 	                             buffer->StrideV(), av_frame_->data[0], av_frame_->linesize[0], av_frame_->data[1],
-	                             av_frame_->linesize[1], width_, height_);
+	                             av_frame_->linesize[1], av_frame_->width, av_frame_->height);
 	    if (res != 0) {
 		    RTC_LOG(LS_ERROR) << "I420ToNV12 error";
 		    return WEBRTC_VIDEO_CODEC_ERROR;
@@ -200,8 +202,8 @@ FFmpegVideoEncoder::Encode(const webrtc::VideoFrame &input_image,
 	    hw_frame->linesize[0] = buffer->StrideY();
 	    hw_frame->linesize[1] = buffer->StrideU();
 	    hw_frame->linesize[2] = buffer->StrideV();
-	    hw_frame->width = width_;
-	    hw_frame->height = height_;
+	    hw_frame->width = buffer->width();
+	    hw_frame->height = buffer->height();
 	    hw_frame->format = getFramePixelFormat();
     }
     // set ts

@@ -65,8 +65,6 @@ private:
     std::unique_ptr<AVFrame, AVFrameDeleter> av_frame_;
     std::unique_ptr<AVBufferRef, AVBufferDeleter> hw_context_;
     webrtc::EncodedImageCallback *encoded_image_callback_;
-    int width_;
-    int height_;
     double frame_rate_;
 
     bool IsInitialized() const;
