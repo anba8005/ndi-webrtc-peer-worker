@@ -1,4 +1,6 @@
-FROM ubuntu:bionic
+FROM ubuntu:focal
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN sed --in-place --regexp-extended "s/(\/\/)(archive\.ubuntu)/\1lt.\2/" /etc/apt/sources.list && \
     apt update && apt -y install build-essential make nasm sudo cmake libx11-dev libglu1-mesa-dev \
