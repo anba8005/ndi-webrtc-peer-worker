@@ -17,8 +17,8 @@ void SetSessionDescriptionObserver::OnSuccess() {
     signaling->replyOk(command,correlation);
 }
 
-void SetSessionDescriptionObserver::OnFailure(const std::string &error) {
-    signaling-> replyError(command,error,correlation);
+void SetSessionDescriptionObserver::OnFailure(webrtc::RTCError error) {
+    signaling-> replyError(command,"error",correlation);
 }
 
 SetSessionDescriptionObserver *

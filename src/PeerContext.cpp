@@ -456,10 +456,6 @@ void PeerContext::OnAddTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface> re
 		}
 	}
 	//
-	try {
-		receivedTracks[track->id()] = streams.at(0)->id();
-	} catch (...) {}
-	//
 	track.release();
 }
 
@@ -471,46 +467,21 @@ void PeerContext::OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface>
 	//
 	signaling->state("OnRemoveTrack", payload);
 	//
-	//
-	//
 	if (writer) {
 		if (track->kind() == track->kVideoKind) {
-			writer->setVideoTrack(nullptr);
+			writer->resetVideoTrack(dynamic_cast<webrtc::VideoTrackInterface *>(track.get()));
 		} else if (track->kind() == track->kAudioKind) {
-			writer->setAudioTrack(nullptr);
+			writer->resetAudioTrack(dynamic_cast<webrtc::AudioTrackInterface *>(track.get()));
 		}
 	}
 	//
 	if (preview) {
 		if (track->kind() == track->kVideoKind) {
-			preview->setVideoTrack(nullptr);
+			preview->resetVideoTrack(dynamic_cast<webrtc::VideoTrackInterface *>(track.get()));
 		} else if (track->kind() == track->kAudioKind) {
-			preview->setAudioTrack(nullptr);
+			preview->resetAudioTrack(dynamic_cast<webrtc::AudioTrackInterface *>(track.get()));
 		}
 	}
-	//
-	// stop writers if no tracks left or removing last track from praticular stream
-	//
-	bool shouldStop = false;
-	try {
-		auto stream = receivedTracks.at(track->id());
-		for (auto i = receivedTracks.begin(); i != receivedTracks.end(); i++) {
-			if (track->id() != i->first) {
-				shouldStop = shouldStop || stream != i->second;
-			}
-		}
-	} catch (...) {}
-	//
-	receivedTracks.erase(track->id());
-	//
-	if (receivedTracks.size() == 0 || shouldStop) {
-		if (writerConfig && !writerConfig->persistent)
-			writer.reset();
-		if (previewConfig && !previewConfig->persistent)
-			preview.reset();
-	}
-	//
-	//
 	//
 	track.release();
 }

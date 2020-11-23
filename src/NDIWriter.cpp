@@ -15,17 +15,10 @@
 //#define NDI_TIME_BASE 10000000
 //#define NDI_TIME_BASE_Q (AVRational){1, NDI_TIME_BASE}
 
-NDIWriter::NDIWriter() : _videoTrack(nullptr), _audioTrack(nullptr), _pNDI_send(nullptr), _connected(false),
-						 _connected_attempts(0) {
+NDIWriter::NDIWriter() : _pNDI_send(nullptr), _connected(false), _connected_attempts(0) {
 }
 
 NDIWriter::~NDIWriter() {
-	if (_videoTrack)
-		_videoTrack->RemoveSink(this);
-
-	if (_audioTrack)
-		_audioTrack->RemoveSink(this);
-
 	NDIlib_send_send_video_async_v2(_pNDI_send, nullptr);
 	NDIlib_send_destroy(_pNDI_send);
 
@@ -69,23 +62,23 @@ void NDIWriter::open(Configuration config) {
 
 
 void NDIWriter::setVideoTrack(webrtc::VideoTrackInterface *track) {
-	_videoTrack = track;
-	if (track) {
-		_videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
-		std::cerr << "NDI video track received " << _name << std::endl;
-	} else {
-		std::cerr << "NDI video track removed " << _name << std::endl;
-	};
+	track->AddOrUpdateSink(this, rtc::VideoSinkWants());
+	std::cerr << "NDI video track received " << _name << std::endl;
 }
 
 void NDIWriter::setAudioTrack(webrtc::AudioTrackInterface *track) {
-	_audioTrack = track;
-	if (track) {
-		_audioTrack->AddSink(this);
-		std::cerr << "NDI audio track received " << _name << std::endl;
-	} else {
-		std::cerr << "NDI audio track removed " << _name << std::endl;
-	}
+	track->AddSink(this);
+	std::cerr << "NDI audio track received " << _name << std::endl;
+}
+
+void NDIWriter::resetVideoTrack(webrtc::VideoTrackInterface *track) {
+    track->RemoveSink(this);
+    std::cerr << "NDI video track removed " << _name << std::endl;
+}
+
+void NDIWriter::resetAudioTrack(webrtc::AudioTrackInterface *track) {
+    track->RemoveSink(this);
+    std::cerr << "NDI audio track removed " << _name << std::endl;
 }
 
 void NDIWriter::OnFrame(const webrtc::VideoFrame &yuvframe) {

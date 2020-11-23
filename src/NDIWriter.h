@@ -50,6 +50,10 @@ public:
 
     void setAudioTrack(webrtc::AudioTrackInterface *track);
 
+    void resetVideoTrack(webrtc::VideoTrackInterface *track);
+
+    void resetAudioTrack(webrtc::AudioTrackInterface *track);
+
     // VideoSinkInterface
     void OnFrame(const webrtc::VideoFrame &frame) override;
 
@@ -64,9 +68,6 @@ private:
     OutputMode _outputMode;
     std::atomic<bool> _connected;
     uint64_t _connected_attempts;
-    //
-    rtc::scoped_refptr<webrtc::VideoTrackInterface> _videoTrack;
-    rtc::scoped_refptr<webrtc::AudioTrackInterface> _audioTrack;
     //
     NDIlib_send_create_t _NDI_send_create_desc;
     NDIlib_send_instance_t _pNDI_send;

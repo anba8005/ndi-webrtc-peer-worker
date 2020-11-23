@@ -30,8 +30,8 @@ void CreateSessionDescriptionObserver::OnSuccess(webrtc::SessionDescriptionInter
     signaling->replyWithPayload(command, payload, correlation);
 }
 
-void CreateSessionDescriptionObserver::OnFailure(const string &error) {
-    signaling->replyError(command, error, correlation);
+void CreateSessionDescriptionObserver::OnFailure(webrtc::RTCError error) {
+    signaling->replyError(command, "error", correlation);
 }
 
 CreateSessionDescriptionObserver *

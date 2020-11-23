@@ -4,11 +4,11 @@ set(EXECUTABLE_OUTPUT_PATH "bin")
 
 # WEBRTC
 IF (WIN32)
-	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-48bc4a6-win-x64)
+	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-40987-06c35ad-win-x64)
 ELSEIF(APPLE)
-	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-48bc4a6-mac-x64)
+	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-40987-06c35ad-mac-x64)
 ELSE()
-	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-29507-48bc4a6-linux-x64)
+	set(WEBRTC_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/webrtc/webrtc-40987-06c35ad-linux-x64)
 ENDIF()
 
 set(CMAKE_CXX_STANDARD 14)
@@ -35,13 +35,13 @@ set(FFMPEG_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/ffmpeg)
 
 # NDI
 IF (WIN32)
-	set(NDI_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/lib/x64/Processing.NDI.Lib.x64.lib)
+	set(NDI_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/win/lib/x64/Processing.NDI.Lib.x64.lib)
 ELSEIF(APPLE)
-	set(NDI_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/lib/x64/libndi.4.dylib)
+	set(NDI_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/mac/lib/x64/libndi.4.dylib)
 ELSE()
 	set(NDI_LIBS ndi)
 ENDIF()
-set(NDI_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/include)
+set(NDI_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/linux/include)
 
 # libmfx
 IF (WIN32)

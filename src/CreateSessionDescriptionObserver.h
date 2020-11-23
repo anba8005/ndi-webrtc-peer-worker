@@ -6,6 +6,7 @@
 #define GYVAITV_WEBRTC_CREATESESSIONDESCRIPTIONOBSERVER_H
 
 #include <api/jsep.h>
+#include <api/rtc_error.h>
 #include <string>
 #include <memory>
 
@@ -22,7 +23,7 @@ public:
 
     void OnSuccess(webrtc::SessionDescriptionInterface *desc) override;
 
-    void OnFailure(const string &error) override;
+    void OnFailure(webrtc::RTCError error) override;
 
 protected:
 

@@ -6,6 +6,7 @@
 #define GYVAITV_WEBRTC_SETSESSIONDESCRIPTIONOBSERVER_H
 
 #include <api/jsep.h>
+#include <api/rtc_error.h>
 #include <string>
 #include <memory>
 
@@ -22,7 +23,7 @@ public:
 
     virtual void OnSuccess() override;
 
-    virtual void OnFailure(const std::string &error) override;
+    virtual void OnFailure(webrtc::RTCError error) override;
 
 protected:
 
