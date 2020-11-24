@@ -36,12 +36,14 @@ set(FFMPEG_INCLUDE_DIR ${WEBRTC_INCLUDE_DIR}/third_party/ffmpeg)
 # NDI
 IF (WIN32)
 	set(NDI_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/win/lib/x64/Processing.NDI.Lib.x64.lib)
+	set(NDI_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/win/include)
 ELSEIF(APPLE)
 	set(NDI_LIBS ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/mac/lib/x64/libndi.4.dylib)
+	set(NDI_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/mac/include)
 ELSE()
 	set(NDI_LIBS ndi)
+	set(NDI_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/linux/include)
 ENDIF()
-set(NDI_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/vendor/ndi/linux/include)
 
 # libmfx
 IF (WIN32)
