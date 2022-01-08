@@ -65,6 +65,7 @@ private:
     int channelOffset;
     int numChannels;
     std::mutex configMutex;
+    long numVideoFrames;
 
     ThrottledReporter no_data_reporter;
 };

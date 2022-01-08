@@ -81,6 +81,9 @@ std::unique_ptr<CustomEncoderFactory> CustomEncoderFactory::Create() {
 
 void CustomEncoderFactory::updateFrameRate(int num, int den) {
     frame_rate = av_q2d({num, den});
+    if (frame_rate > 30.0) {
+        frame_rate = av_q2d({num / 2, den});
+    }
 }
 
 void CustomEncoderFactory::setConfiguration(json configuration) {

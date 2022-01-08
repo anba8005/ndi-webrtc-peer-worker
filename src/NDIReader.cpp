@@ -6,7 +6,8 @@
 
 #include <iostream>
 
-NDIReader::NDIReader() : running(false), _pNDI_recv(nullptr), no_data_reporter("NDIReader: No data received") {}
+NDIReader::NDIReader() : running(false), _pNDI_recv(nullptr), no_data_reporter("NDIReader: No data received"),
+                         numVideoFrames(0) {}
 
 NDIReader::~NDIReader() {
     if (this->isRunning()) {
@@ -27,7 +28,8 @@ void NDIReader::open(Configuration config) {
     this->channelOffset = config.channelOffset;
     configMutex.unlock();
 
-    std::cerr << "NDI talkback config offset -> " << config.channelOffset << " channels -> " << config.numChannels << std::endl;
+    std::cerr << "NDI talkback config offset -> " << config.channelOffset << " channels -> " << config.numChannels
+              << std::endl;
 
     // skip if already opened with same name
     if (_pNDI_recv && this->name == config.name) {
@@ -158,10 +160,22 @@ void NDIReader::run() {
                 // send
                 if (vdm) {
                     //
-                    vdm->updateFrameRate(video_frame.frame_rate_N, video_frame.frame_rate_D);
-                    //
-                    vdm->feedFrame(video_frame.xres, video_frame.yres, video_frame.p_data,
-                                   video_frame.line_stride_in_bytes, video_frame.timestamp, maxWidth, maxHeight);
+                    double fps = (double) video_frame.frame_rate_N / (double) video_frame.frame_rate_D;
+                    if ((fps > 30.0)) {
+                        // high fps - send half of frames
+                        if (numVideoFrames % 2 == 0) {
+                            vdm->updateFrameRate(video_frame.frame_rate_N / 2, video_frame.frame_rate_D);
+                            vdm->feedFrame(video_frame.xres, video_frame.yres, video_frame.p_data,
+                                           video_frame.line_stride_in_bytes, video_frame.timestamp, maxWidth,
+                                           maxHeight);
+                        }
+                    }  else {
+                        // norm fps - send all
+                        vdm->updateFrameRate(video_frame.frame_rate_N, video_frame.frame_rate_D);
+                        vdm->feedFrame(video_frame.xres, video_frame.yres, video_frame.p_data,
+                                       video_frame.line_stride_in_bytes, video_frame.timestamp, maxWidth, maxHeight);
+                    }
+                    this->numVideoFrames++;
                 }
                 // free
                 NDIlib_recv_free_video_v2(_pNDI_recv, &video_frame);
